@@ -7,7 +7,7 @@ This document is the implementation contract for the hackathon build. It replace
 ## Product constraints already decided
 
 - Judges should not need to create a real account.
-- User changes last for the current browser session only.
+- Real accounts persist; demo changes last for the current browser session only.
 - The judge path must work even if an external API is slow or unavailable.
 - `Interested` is private until the user explicitly chooses `Find company`.
 - Profiles show a name, image, one-line introduction, attendance count, and interests; they do not expose age or gender in the picker.
@@ -17,25 +17,35 @@ This document is the implementation contract for the hackathon build. It replace
 
 ## Recommended runtime architecture
 
-### Judge-facing path
+### Two operating modes
 
-Use a single seeded demo identity and session-scoped state. Do not make Supabase or OAuth a dependency of the three-minute demo.
+Dyad has two deliberately separated modes:
 
-- `sessionStorage`: onboarding, profile edits, notification preferences, interested/saved activities, created groups, selected invitees, and sent demo messages.
-- Seeded local data: profiles, attendance counts, activity images, group history, and initial chat messages.
+- **Real mode:** email/password users authenticate with Supabase. Profiles, interests, activity states, discoverability, invitations, groups, connections, and messages persist in Postgres. Group messages update through Supabase Realtime.
+- **Demo mode:** a seeded identity and all changes stay in `sessionStorage`. Demo users never write to Supabase, never appear to real users, and cannot message real accounts.
+
+The modes share UI and domain types but use different repositories behind one interface. This prevents demo records from contaminating the real social graph while preserving a reliable judge path.
+
+Shared supporting data:
+
+- Seeded local demo data: profiles, attendance counts, activity images, group history, and initial chat messages.
 - Ticketmaster: refresh or augment official activity data server-side; fall back to the checked-in activity catalog.
 - Meta Model API: generate one visible, useful result; fall back to a deterministic local result with the same response shape.
 
-This is deliberately not a fake multi-user system. It is an interactive single-session prototype whose complete judge path remains functional.
+### Real social proof for judging
 
-### Deferred production architecture
+Before the demo, create a small set of genuine accounts for the user and willing helpers. Each person should complete a profile, mark the same controlled activity as discoverable, and join one test group. This lets judges see live people and Realtime chat without requiring strangers or fabricating activity. Seeded demo people remain available only in demo mode.
 
-Supabase Auth, Postgres, Realtime, and RLS are post-demo infrastructure. The repository contains an earlier schema, but it should not be connected unchanged: it includes discarded onboarding fields and assumptions. When durable accounts become a requirement, create a fresh migration from the final session-state model rather than treating the existing migration as authoritative.
+### Supabase scope
+
+Supabase Auth, Postgres, Realtime, and RLS are part of the real-account golden path. The repository contains an earlier schema, but it must not be deployed unchanged because it includes discarded onboarding fields and assumptions. Create a fresh migration from the final domain model.
+
+Minimum persistent tables: `profiles`, `profile_interests`, `activities`, `activity_states`, `groups`, `group_members`, `group_invites`, `messages`, `connections`, `blocks`, and `reports`. Every exposed table requires RLS. Message reads/inserts are restricted to group members; profile edits and activity-state writes are restricted to the owning user.
 
 ## Golden path
 
 1. Landing page → Log in or Create account.
-2. Enter through a clearly labeled demo path; no real credential is required.
+2. Log into a persistent account or choose the clearly labeled session-only demo path.
 3. Pick at least five interests.
 4. Share location, enter an address, or use the seeded San Diego demo location.
 5. Browse Discovery and open an activity.
@@ -49,7 +59,8 @@ Supabase Auth, Postgres, Realtime, and RLS are post-demo infrastructure. The rep
 
 | Action | Session result | Destination/feedback |
 | --- | --- | --- |
-| Continue as demo | Creates the seeded current-user session | Onboarding interests |
+| Create account / Log in | Creates or restores a Supabase session | Onboarding or last valid app page |
+| Continue as demo | Creates a local seeded session without Supabase writes | Onboarding interests |
 | Select interest | Adds/removes a tag | Counter enforces five minimum |
 | Save location | Stores GPS coordinates or typed address | Discovery |
 | Interested | Toggles private activity interest | Button state changes immediately |
@@ -68,7 +79,7 @@ Every transition needs a loading state, success feedback, and a recoverable erro
 | --- | --- | --- |
 | Meta Model API | Visible AI output | Key configured and live request verified |
 | Ticketmaster Discovery API | Official San Diego event source | Key configured and live request verified |
-| Supabase | Connected for later durable auth/data | Project URL and publishable key configured; no schema deployed |
+| Supabase | Persistent real accounts, user data, and Realtime chat | Project connected; fresh schema still required |
 | Google OAuth | Not required for judge path | Do not configure yet |
 | Scheduled sync | Optional pre-demo refresh | Cron secret configured; hosting scheduler undecided |
 
@@ -88,7 +99,7 @@ All options must use grounded activity IDs and verified event facts. Private cha
 
 ## Demo access decision
 
-Replace the current Google OAuth control with a prominent `Continue as demo` button during golden-path implementation. The email/password fields may accept any non-empty values for the current session, but the UI must state that nothing is stored. Do not configure Google OAuth for the hackathon path.
+The Google OAuth control has been replaced with a prominent `Continue as demo` button. Email/password forms are reserved for genuine Supabase accounts and must never pretend to authenticate. Demo mode states that its data resets with the session. Do not configure Google OAuth for the hackathon path.
 
 ## Failure strategy
 
@@ -119,9 +130,8 @@ Replace the current Google OAuth control with a prominent `Continue as demo` but
 
 ## Work explicitly deferred
 
-- Real account creation, password reset, email verification, and Google OAuth.
-- Cross-device persistence and real multi-user messaging.
-- Supabase schema deployment, Realtime, and production RLS validation.
+- Password reset, Google OAuth, and production-grade account recovery.
+- Push/email verification may remain simplified for invited hackathon testers.
 - Push notifications.
 - Moderation operations beyond the designed block/report UI.
 - Background event sync beyond an optional pre-demo refresh.

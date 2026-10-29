@@ -17,7 +17,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`. The finished judge path will use a session-only demo identity and will not require a real account.
+Open `http://localhost:3000`. The finished app will support persistent Supabase accounts plus an isolated session-only demo identity for judges.
 
 Useful checks:
 
@@ -36,11 +36,11 @@ Copy `.env.example` to `.env.local`. The hackathon path requires:
 - `TICKETMASTER_API_KEY`
 - `CRON_SECRET`
 
-Supabase values are optional and should be configured only when durable accounts or multi-user data are intentionally added. Never expose the Supabase secret key or Meta key through `NEXT_PUBLIC_` variables.
+The Supabase project URL and publishable key connect persistent real accounts and multi-user data. A server secret is optional and should be added only for reviewed server-only operations. Never expose the Supabase secret key or Meta key through `NEXT_PUBLIC_` variables.
 
-### Deferred Supabase reference
+### Supabase schema note
 
-The repository contains an earlier migration in `supabase/migrations/` and a local seed in `supabase/seed.sql`. They should be revised against the approved session-state model before deployment.
+The repository contains an earlier migration in `supabase/migrations/` and a local seed in `supabase/seed.sql`. They must be replaced with a fresh schema for the approved two-mode architecture before deployment.
 
 ```bash
 npx supabase start

@@ -34,7 +34,8 @@ export default function LoginPage() {
           </form>
 
           <div className={styles.authDivider}><span>OR</span></div>
-          <button className={styles.authGoogleButton} type="button"><span>G</span>Continue with Google</button>
+          <Link className={styles.authDemoButton} href="/onboarding/interests"><span>D</span>Continue as demo</Link>
+          <p className={styles.authDemoNote}>No account required · resets when this session ends</p>
           <p className={styles.accountSwitch}>New to Dyad? <Link href="/signup">Create an account</Link></p>
         </div>
       </section>

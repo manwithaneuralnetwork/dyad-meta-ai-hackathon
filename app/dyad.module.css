@@ -282,8 +282,9 @@
 .authPrimaryButton svg { color: var(--dyad-aqua); }
 .authDivider { display: flex; align-items: center; gap: 12px; margin: 23px 0 17px; color: #959c99; font-size: 9px; font-weight: 780; letter-spacing: 1px; }
 .authDivider::before, .authDivider::after { content: ""; height: 1px; flex: 1; background: var(--dyad-border); }
-.authGoogleButton { display: flex; width: 100%; min-height: 50px; align-items: center; justify-content: center; gap: 10px; border: 1px solid #cfd5d2; border-radius: 14px; background: white; color: var(--dyad-ink); font-size: 13px; font-weight: 770; }
-.authGoogleButton > span { display: grid; place-items: center; width: 23px; height: 23px; border-radius: 50%; background: var(--dyad-surface); color: #4285f4; font-size: 12px; font-weight: 850; }
+.authDemoButton { display: flex; width: 100%; min-height: 50px; align-items: center; justify-content: center; gap: 10px; border: 1px solid #cfd5d2; border-radius: 14px; background: white; color: var(--dyad-ink); font-size: 13px; font-weight: 770; }
+.authDemoButton > span { display: grid; place-items: center; width: 23px; height: 23px; border-radius: 50%; background: var(--dyad-aqua); color: var(--dyad-ink); font-size: 12px; font-weight: 850; }
+.authDemoNote { margin: 8px 0 0; color: var(--dyad-muted); font-size: 9px; text-align: center; }
 .authBody .accountSwitch { margin-top: 20px; }
 
 .myActivitiesScroll { padding-bottom: 30px; }

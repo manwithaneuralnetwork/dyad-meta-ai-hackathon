@@ -36,7 +36,8 @@ export default function SignUpPage() {
 
           <div className={styles.authDivider}><span>OR</span></div>
 
-          <button className={styles.authGoogleButton} type="button"><span>G</span>Continue with Google</button>
+          <Link className={styles.authDemoButton} href="/onboarding/interests"><span>D</span>Continue as demo</Link>
+          <p className={styles.authDemoNote}>No account required · resets when this session ends</p>
           <p className={styles.accountSwitch}>Already have an account? <Link href="/login">Log in</Link></p>
         </div>
       </section>
