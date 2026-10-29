@@ -1,0 +1,19 @@
+-- Run after deploying the sync-ticketmaster Edge Function and storing secrets in Vault.
+-- Replace the placeholders only in the Supabase SQL editor; never commit real keys.
+select vault.create_secret('https://YOUR_PROJECT_REF.supabase.co', 'project_url');
+select vault.create_secret('YOUR_SUPABASE_SECRET_KEY', 'secret_key');
+
+select cron.schedule(
+  'dyad-ticketmaster-sync',
+  '0 */6 * * *',
+  $$
+    select net.http_post(
+      url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url') || '/functions/v1/sync-ticketmaster',
+      headers := jsonb_build_object(
+        'content-type', 'application/json',
+        'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'secret_key')
+      ),
+      body := jsonb_build_object('triggered_at', now())
+    );
+  $$
+);
