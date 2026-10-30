@@ -22,7 +22,7 @@ test("demo onboarding reaches Discovery without creating an account", async ({ p
   await page.getByRole("spinbutton", { name: "Age" }).fill("28");
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Where should we look?" })).toBeVisible();
-  await page.getByRole("textbox", { name: "Enter your street address" }).fill("123 Main St, San Diego, CA");
+  await page.getByRole("textbox", { name: "Enter a San Diego street address" }).fill("123 Main St, San Diego, CA");
   await page.getByRole("button", { name: "Finish" }).click();
 
   await expect(page).toHaveURL(/\/feed$/);
@@ -49,6 +49,10 @@ test("demo onboarding reaches Discovery without creating an account", async ({ p
   await page.getByRole("searchbox", { name: "Search your activities" }).fill("no-such-dyad-activity");
   await expect(page.getByText("No interested activities match your search.")).toBeVisible();
   await expect(page.getByText("No saved activities match your search.")).toBeVisible();
+
+  await page.getByRole("link", { name: "Chats" }).click();
+  await expect(page.getByRole("heading", { name: "No conversations yet" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Explore Discovery" })).toHaveAttribute("href", "/feed");
 });
 
 test("real account forms collect email and password", async ({ page }) => {

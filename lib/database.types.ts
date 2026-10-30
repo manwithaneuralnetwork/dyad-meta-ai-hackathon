@@ -79,6 +79,30 @@ export type Database = {
         Update: { activity_id?: string; interested?: boolean; saved?: boolean; updated_at?: string; user_id?: string };
         Relationships: [];
       };
+      groups: {
+        Row: { id: string; activity_id: string; created_by: string; created_at: string; updated_at: string; last_message_at: string };
+        Insert: { id?: string; activity_id: string; created_by: string; created_at?: string; updated_at?: string; last_message_at?: string };
+        Update: { id?: string; activity_id?: string; created_by?: string; created_at?: string; updated_at?: string; last_message_at?: string };
+        Relationships: [];
+      };
+      group_members: {
+        Row: { group_id: string; user_id: string; role: string; joined_at: string };
+        Insert: { group_id: string; user_id: string; role?: string; joined_at?: string };
+        Update: { group_id?: string; user_id?: string; role?: string; joined_at?: string };
+        Relationships: [];
+      };
+      group_invites: {
+        Row: { id: string; group_id: string; inviter_id: string; invitee_id: string; status: string; created_at: string; responded_at: string | null };
+        Insert: { id?: string; group_id: string; inviter_id: string; invitee_id: string; status?: string; created_at?: string; responded_at?: string | null };
+        Update: { id?: string; group_id?: string; inviter_id?: string; invitee_id?: string; status?: string; created_at?: string; responded_at?: string | null };
+        Relationships: [];
+      };
+      messages: {
+        Row: { id: string; group_id: string; sender_id: string; body: string; created_at: string };
+        Insert: { id?: string; group_id: string; sender_id: string; body: string; created_at?: string };
+        Update: { id?: string; group_id?: string; sender_id?: string; body?: string; created_at?: string };
+        Relationships: [];
+      };
       interest_tags: {
         Row: { active: boolean; created_at: string; is_core: boolean; label: string; source: string };
         Insert: { active?: boolean; created_at?: string; is_core?: boolean; label: string; source?: string };
@@ -176,8 +200,20 @@ export type Database = {
         };
         Returns: undefined;
       };
+      create_activity_group: {
+        Args: { p_activity_id: string; p_invitee_ids: string[] };
+        Returns: string;
+      };
+      invite_more_to_group: {
+        Args: { p_group_id: string; p_invitee_ids: string[] };
+        Returns: number;
+      };
       replace_my_interests: {
         Args: { p_interests: string[] };
+        Returns: undefined;
+      };
+      respond_to_group_invite: {
+        Args: { p_group_id: string; p_response: string };
         Returns: undefined;
       };
       set_my_activity_state: {

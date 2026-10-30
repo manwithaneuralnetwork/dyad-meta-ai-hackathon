@@ -7,14 +7,18 @@ import styles from "../dyad.module.css";
 import SmartBackButton from "../smart-back-button";
 
 type ChatHeaderProps = {
+  activityHref?: string;
   backHref: string;
   direct: boolean;
   imageLabel: string;
+  location?: string;
+  onInvite?: () => void;
+  onLeave?: () => void;
   subtitle: string;
   title: string;
 };
 
-export default function ChatHeader({ backHref, direct, imageLabel, subtitle, title }: ChatHeaderProps) {
+export default function ChatHeader({ activityHref = "/feed", backHref, direct, imageLabel, location, onInvite, onLeave, subtitle, title }: ChatHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
 
@@ -35,10 +39,10 @@ export default function ChatHeader({ backHref, direct, imageLabel, subtitle, tit
       {direct ? (
         <span className={`${styles.groupImage} ${styles.directImage}`} aria-hidden="true">{imageLabel}</span>
       ) : (
-        <Link className={`${styles.groupImage} ${styles.activityGroupImage}`} href="/activity" aria-label={`Open ${title}`} />
+        <Link className={`${styles.groupImage} ${styles.activityGroupImage}`} href={activityHref} aria-label={`Open ${title}`} />
       )}
       <div className={styles.groupHeading}>
-        <h1>{direct ? title : <Link href="/activity">{title}</Link>}</h1>
+        <h1>{direct ? title : <Link href={activityHref}>{title}</Link>}</h1>
         <p>{subtitle}</p>
       </div>
       <div className={styles.groupTools}>
@@ -47,8 +51,8 @@ export default function ChatHeader({ backHref, direct, imageLabel, subtitle, tit
             <button className={styles.groupIconButton} type="button" aria-label="Show activity location" aria-expanded={locationOpen} onClick={() => { setLocationOpen((value) => !value); setMenuOpen(false); }}><MapPin size={19} /></button>
             {locationOpen && (
               <div className={styles.groupLocationCard} role="status">
-                <span>The Courtyard at Marina Park</span>
-                <strong>222 Marina Park Way</strong>
+                <span>Activity location</span>
+                <strong>{location || "See activity details"}</strong>
               </div>
             )}
           </div>
@@ -58,8 +62,8 @@ export default function ChatHeader({ backHref, direct, imageLabel, subtitle, tit
           <>
             <button className={styles.groupMenuDismiss} type="button" aria-label="Close conversation menu" onClick={() => setMenuOpen(false)} />
             <div className={styles.groupMenu} role="menu">
-              {!direct && <button className={styles.groupMenuAction} type="button" role="menuitem"><UserPlus size={15} />Invite people</button>}
-              <button className={styles.leaveGroupButton} type="button" role="menuitem"><LogOut size={15} />{direct ? "Close conversation" : "Leave group"}</button>
+              {!direct && <button className={styles.groupMenuAction} type="button" role="menuitem" onClick={() => { setMenuOpen(false); onInvite?.(); }}><UserPlus size={15} />Invite people</button>}
+              <button className={styles.leaveGroupButton} type="button" role="menuitem" onClick={onLeave}><LogOut size={15} />{direct ? "Close conversation" : "Leave group"}</button>
             </div>
           </>
         )}

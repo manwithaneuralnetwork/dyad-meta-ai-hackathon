@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Check, Plus, UserRound, UsersRound, X } from "lucide-react";
 import Link from "next/link";
 import styles from "../dyad.module.css";
 import { listDiscoverableProfiles, type ActivityRecord, type PublicProfile, type Viewer } from "@/lib/activity-data";
+import { createActivityGroup } from "@/lib/group-data";
+import { toggleInviteSelection } from "@/lib/group-rules";
 
 export default function FindCompanySheet({
   activity,
@@ -17,11 +20,13 @@ export default function FindCompanySheet({
   initiallyOpen?: boolean;
   onActivate: () => Promise<boolean>;
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(initiallyOpen);
   const [people, setPeople] = useState<PublicProfile[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -52,7 +57,20 @@ export default function FindCompanySheet({
   }
 
   function togglePerson(userId: string) {
-    setSelected((current) => current.includes(userId) ? current.filter((id) => id !== userId) : current.length < 10 ? [...current, userId] : current);
+    setSelected((current) => toggleInviteSelection(current, userId));
+  }
+
+  async function createGroup() {
+    if (!selected.length) return;
+    setCreating(true);
+    setError("");
+    try {
+      const groupId = await createActivityGroup(activity.id, selected, viewer);
+      router.push(`/group?id=${groupId}`);
+    } catch (groupError) {
+      setError(groupError instanceof Error ? groupError.message : "We couldn’t create this group.");
+      setCreating(false);
+    }
   }
 
   return (
@@ -96,7 +114,7 @@ export default function FindCompanySheet({
             </div>
 
             <footer className={styles.sheetFooter}>
-              <button className={styles.createGroupButton} type="button" disabled={!selected.length}><Plus size={17} />{selected.length ? `Create Group · ${selected.length}` : "Select someone first"}</button>
+              <button className={styles.createGroupButton} type="button" disabled={!selected.length || creating} onClick={() => void createGroup()}><Plus size={17} />{creating ? "Creating group…" : selected.length ? `Create Group · ${selected.length}` : "Select someone first"}</button>
             </footer>
           </section>
         </div>

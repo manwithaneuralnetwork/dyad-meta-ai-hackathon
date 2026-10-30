@@ -6,7 +6,7 @@ The app intentionally separates **Interested** (private) from **Find company** (
 
 ## Current status
 
-The approved mobile UI, two-mode authentication, three-step onboarding, persistent activity catalog, AI-assisted interest tags, duplicate rejection, Discovery filters, and per-user Interested/Saved/Find-company state are implemented. Demo mode keeps those choices in the current browser session; real accounts persist them in Supabase. Groups and chat are the next implementation checkpoint.
+The approved mobile UI, two-mode authentication, onboarding, persistent activity catalog, AI-assisted interest tags, duplicate rejection, Discovery filters, per-user activity state, activity groups, invitations, and Realtime chat are implemented. Demo mode remains isolated in the current browser session; real accounts persist their social data in Supabase behind RLS.
 
 The implementation contract and setup status live in [docs/golden-path-readiness.md](docs/golden-path-readiness.md).
 

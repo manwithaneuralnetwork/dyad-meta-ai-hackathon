@@ -1,6 +1,6 @@
 # Dyad golden-path readiness
 
-Status: **Checkpoint 2 complete: identity, onboarding, Discovery, and activity state implemented.**
+Status: **Checkpoint 3 implemented: groups, invitations, membership, and Realtime chat are wired. Live multi-account acceptance testing remains before judge hardening.**
 
 This document is the implementation contract for the hackathon build. It replaces the behavior assumptions in the earlier implementation while preserving the approved mobile UI.
 
@@ -104,7 +104,7 @@ The Google OAuth control has been replaced with a prominent `Continue as demo` b
 
 1. **Identity and onboarding — complete.** Real email/password accounts use Supabase Auth. Profiles, interests, and private locations persist behind RLS. Demo onboarding uses `sessionStorage` only.
 2. **Discovery and activity state — complete.** Feed fixtures are removed. Supabase stores the shared catalog plus real-user Interested, Saved, and Find company state; demo choices remain session-only.
-3. **Groups and live chat.** Persist invitations, group membership, and messages; enforce membership with RLS; subscribe to messages with Realtime.
+3. **Groups and live chat — implemented.** Invitations, accepted membership, messages, membership RLS, chat lists, activity-group links, and Realtime message subscriptions are wired. The hosted project still needs two or more real test accounts for live acceptance testing.
 4. **Judge hardening and deploy.** Connect the visible Meta moment, exercise fallbacks, deploy, run the production smoke suite, and rehearse the three-minute path.
 
 ## Failure strategy

@@ -219,6 +219,13 @@
 .composer input { min-width: 0; height: 42px; padding: 0 15px; border: 1px solid var(--dyad-border); border-radius: 999px; outline: none; background: var(--dyad-surface); font: inherit; font-size: 12px; }
 .composer input:focus { border-color: var(--dyad-aqua-deep); background: white; }
 .sendButton { display: grid; place-items: center; width: 42px; height: 42px; padding: 0; border: 0; border-radius: 50%; background: var(--dyad-ink); color: var(--dyad-aqua); }
+.sendButton:disabled { opacity: .35; }
+.groupInviteState { display: grid; place-items: center; margin: auto; padding: 32px 28px; text-align: center; }
+.groupInviteState h1 { margin: 8px 0 10px; font-size: 30px; letter-spacing: -1.4px; }
+.groupInviteState > p:not(.eyebrow, .pageError) { max-width: 300px; margin: 0 0 22px; color: var(--dyad-muted); font-size: 13px; line-height: 1.5; }
+.groupInviteState > div { display: grid; width: 100%; max-width: 330px; grid-template-columns: 1fr 1fr; gap: 9px; }
+.groupInviteState > div button { min-height: 44px; border: 1px solid var(--dyad-border); border-radius: 999px; background: white; font-size: 11px; font-weight: 800; }
+.groupInviteState > div button:last-child { border-color: var(--dyad-ink); background: var(--dyad-ink); color: white; }
 
 .profilePage { min-height: 100dvh; padding-bottom: 42px; }
 .profileTopbar { display: flex; align-items: center; justify-content: space-between; padding: 17px 18px; }
@@ -339,6 +346,7 @@
 .chatListRow::after { content: ""; position: absolute; left: 77px; right: 20px; bottom: 0; height: 1px; background: var(--dyad-border); }
 .chatListAvatar { position: relative; display: grid; place-items: center; width: 46px; height: 46px; overflow: hidden; border-radius: 50%; font-size: 10px; font-weight: 850; }
 .chatListActivity { background: var(--dyad-ink); }
+.chatListAvatar img { width: 100%; height: 100%; object-fit: cover; }
 .chatListActivity::before, .chatListActivity::after { content: ""; position: absolute; }
 .chatListPerson { background: var(--dyad-aqua); color: var(--dyad-ink); }
 .chatListRow:nth-child(3) .chatListPerson { background: var(--dyad-ink); color: white; }
