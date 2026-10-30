@@ -26,7 +26,8 @@ Deno.serve(async (request) => {
     const incomingByKey = new Map<string, ReturnType<typeof normalizeEvent>>();
     for (const event of events) {
       const activity = normalizeEvent(event);
-      if (!incomingByKey.has(activity.dedupe_key)) incomingByKey.set(activity.dedupe_key, activity);
+      const current = incomingByKey.get(activity.dedupe_key);
+      incomingByKey.set(activity.dedupe_key, current ? preferDuplicate(current, activity) : activity);
     }
 
     const { data: existing, error: existingError } = await supabase.from("activities").select("dedupe_key, external_id");
@@ -117,7 +118,7 @@ function normalizeEvent(event: any) {
     price_label: price ? `$${Math.round(price.min ?? 0)}–$${Math.round(price.max ?? price.min ?? 0)}` : "See source",
     topics: [] as string[],
     status: event.dates?.status?.code === "cancelled" ? "cancelled" : "published",
-    dedupe_key: dedupeKey(event.name, startsAt, city),
+    dedupe_key: dedupeKey(startsAt, venue.name ?? "San Diego venue", venue.address?.line1 ?? "", city),
   };
 }
 
@@ -248,9 +249,23 @@ function heuristicTags(activity: ReturnType<typeof normalizeEvent>) {
 }
 
 function compact(value: string) { return value.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, ""); }
-function dedupeKey(title: string, startsAt: string, city: string) {
+function canonicalVenue(value: string) {
+  return value
+    .replace(/\s*(?:-|–|—)?\s*(?:san diego|sd)$/i, "")
+    .replace(/\s+tavern$/i, "")
+    .trim();
+}
+function duplicateQualityScore(activity: ReturnType<typeof normalizeEvent>) {
+  const nonEvent = /(add.?on|not an event ticket|parking|vip.*upgrade)/i.test(activity.title);
+  const informativeType = /\b(concert|show|performance|game|festival|tour|workshop|class|party|event)\b/i.test(activity.title);
+  return (nonEvent ? -10_000 : 0) + (informativeType ? 100 : 0) + Math.min(activity.title.length, 140) + Math.min(activity.description.length, 500) / 20;
+}
+function preferDuplicate(current: ReturnType<typeof normalizeEvent>, candidate: ReturnType<typeof normalizeEvent>) {
+  return duplicateQualityScore(candidate) > duplicateQualityScore(current) ? candidate : current;
+}
+function dedupeKey(startsAt: string, venue: string, address: string, city: string) {
   const minute = new Date(startsAt).toISOString().slice(0, 16).replace(/\D/g, "");
-  return `${compact(title)}|${minute}|${compact(city)}`;
+  return `${minute}|${compact(canonicalVenue(venue))}|${compact(address)}|${compact(city)}`;
 }
 function isoWithoutMillis(date: Date) { return date.toISOString().replace(/\.\d{3}Z$/, "Z"); }
 function json(body: unknown, status = 200) { return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } }); }

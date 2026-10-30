@@ -91,8 +91,25 @@ function compactKeyPart(value: string) {
   return value.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "");
 }
 
-export function buildActivityDedupeKey(activity: Pick<Activity, "title" | "startsAt" | "neighborhood">) {
+function canonicalVenue(value: string) {
+  return value
+    .replace(/\s*(?:-|–|—)?\s*(?:san diego|sd)$/i, "")
+    .replace(/\s+tavern$/i, "")
+    .trim();
+}
+
+export function buildActivityDedupeKey(activity: Pick<Activity, "startsAt" | "venue" | "address" | "neighborhood">) {
   const minute = new Date(activity.startsAt).toISOString().slice(0, 16).replace(/\D/g, "");
-  return `${compactKeyPart(activity.title)}|${minute}|${compactKeyPart(activity.neighborhood)}`;
+  return `${minute}|${compactKeyPart(canonicalVenue(activity.venue))}|${compactKeyPart(activity.address ?? "")}|${compactKeyPart(activity.neighborhood)}`;
+}
+
+function duplicateQualityScore(activity: Pick<Activity, "title" | "description">) {
+  const nonEvent = /(add.?on|not an event ticket|parking|vip.*upgrade)/i.test(activity.title);
+  const informativeType = /\b(concert|show|performance|game|festival|tour|workshop|class|party|event)\b/i.test(activity.title);
+  return (nonEvent ? -10_000 : 0) + (informativeType ? 100 : 0) + Math.min(activity.title.length, 140) + Math.min(activity.description.length, 500) / 20;
+}
+
+export function preferDuplicateCandidate<T extends Pick<Activity, "title" | "description">>(current: T, candidate: T): T {
+  return duplicateQualityScore(candidate) > duplicateQualityScore(current) ? candidate : current;
 }
 

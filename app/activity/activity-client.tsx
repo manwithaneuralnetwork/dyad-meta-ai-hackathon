@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Bookmark, CalendarDays, Heart, MapPin, RefreshCw, Ticket, UsersRound } from "lucide-react";
+import { ArrowRight, Bookmark, CalendarDays, Heart, MapPin, RefreshCw, Ticket, UsersRound } from "lucide-react";
 import styles from "../dyad.module.css";
 import FindCompanySheet from "./find-company-sheet";
 import SmartBackButton from "../smart-back-button";
@@ -29,6 +29,7 @@ export default function ActivityClient({ activityId, openCompanyInitially }: { a
   const [loading, setLoading] = useState(Boolean(activityId));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [showInterestNotice, setShowInterestNotice] = useState(false);
 
   const load = useCallback(async () => {
     if (!activityId) return;
@@ -48,6 +49,7 @@ export default function ActivityClient({ activityId, openCompanyInitially }: { a
       setViewer(nextViewer);
       setState(nextStates[activityId] ?? emptyUiState);
       setPeopleCount(nextCount);
+      setShowInterestNotice(false);
     } catch {
       setError("This activity couldn’t be loaded right now.");
     } finally {
@@ -85,6 +87,13 @@ export default function ActivityClient({ activityId, openCompanyInitially }: { a
     { label: "Looking for company", value: peopleCount === null ? "Available to real accounts" : `${peopleCount} ${peopleCount === 1 ? "person is" : "people are"} visible`, Icon: UsersRound },
     { label: "Tickets", value: activity.price_label || "See organizer", Icon: Ticket },
   ];
+  const isTicketmaster = activity.source_name.trim().toLowerCase() === "ticketmaster";
+
+  async function toggleInterested() {
+    const interested = !state.interested;
+    const saved = await persist({ ...state, interested, discoverable: interested });
+    setShowInterestNotice(saved && interested);
+  }
 
   return (
     <main className={styles.pageBackdrop}>
@@ -102,16 +111,17 @@ export default function ActivityClient({ activityId, openCompanyInitially }: { a
           <h1 className={styles.activityHeading}>{activity.title}</h1>
           {activity.topics.length ? <div className={styles.tagList} aria-label="Activity topics">{activity.topics.map((topic) => <span className={styles.tag} key={topic}>{topic}</span>)}</div> : null}
 
-          <div className={styles.activityActions}>
-            <button className={`${styles.activityAction} ${state.interested ? styles.actionSelected : ""}`} type="button" disabled={busy} onClick={() => void persist({ ...state, interested: !state.interested })}><Heart size={16} fill={state.interested ? "currentColor" : "none"} />Interested</button>
+          <div className={`${styles.activityActions} ${showInterestNotice ? styles.activityActionsWithNotice : ""}`}>
+            <button className={`${styles.activityAction} ${state.interested ? styles.actionSelected : ""}`} type="button" disabled={busy} onClick={() => void toggleInterested()}><Heart size={16} fill={state.interested ? "currentColor" : "none"} />Interested</button>
             <FindCompanySheet activity={activity} viewer={viewer} initiallyOpen={openCompanyInitially} onActivate={() => persist({ ...state, interested: true, discoverable: true })} />
           </div>
+          {showInterestNotice ? <p className={styles.interestNotice} role="status">You’re now open to invitations from other Interested people.</p> : null}
           {error ? <p className={styles.pageError} role="alert">{error}</p> : null}
 
           <dl className={styles.activityFacts}>{facts.map(({ label, value, Icon }) => <div className={styles.activityFact} key={label}><span className={styles.factIcon}><Icon size={17} aria-hidden="true" /></span><div><dt>{label}</dt><dd>{value}</dd></div></div>)}</dl>
 
           {activity.description ? <section className={styles.activitySection}><h2>About this activity</h2><p>{activity.description}</p></section> : null}
-          <section className={styles.activitySection}><h2>Hosted by</h2><div className={styles.hostCard}><span className={styles.hostMark}>{activity.source_name.slice(0, 2).toUpperCase()}</span><div><strong>{activity.source_name}</strong>{activity.source_url ? <a href={activity.source_url} target="_blank" rel="noreferrer">View official listing</a> : <span>{activity.source_type === "official" ? "Official activity" : "Community activity"}</span>}</div></div></section>
+          <section className={styles.activitySection}><h2>Hosted by</h2><div className={styles.hostCard}>{isTicketmaster ? <img className={styles.hostLogo} src="/ticketmaster-logo.png" alt="Ticketmaster logo" /> : <span className={styles.hostMark}>{activity.source_name.slice(0, 2).toUpperCase()}</span>}<div><strong>{activity.source_name}</strong>{activity.source_url ? <a className={styles.hostLink} href={activity.source_url} target="_blank" rel="noreferrer">View official listing <ArrowRight size={13} aria-hidden="true" /></a> : <span>{activity.source_type === "official" ? "Official activity" : "Community activity"}</span>}</div></div></section>
         </div>
       </article>
     </main>

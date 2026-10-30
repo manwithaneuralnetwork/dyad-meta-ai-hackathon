@@ -70,7 +70,7 @@ export default function FindCompanySheet({
               <div><p>{activity.title}</p><h2 id="company-sheet-title">Who should join?</h2></div>
               <button className={styles.sheetClose} type="button" aria-label="Close" onClick={() => setOpen(false)}><X size={18} /></button>
             </header>
-            <p className={styles.selectionHint}>Choose at least one person, up to 10. They’ll receive an invite when you create the group.</p>
+            <p className={styles.selectionHint}>Choose at least one person, up to 10. They’ll receive an invite when you create the group. <strong>Only Interested people appear here.</strong></p>
 
             {error ? <p className={styles.pageError} role="alert">{error}</p> : null}
             <div className={styles.peopleList}>

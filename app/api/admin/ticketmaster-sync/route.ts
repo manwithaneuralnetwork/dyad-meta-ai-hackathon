@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { fetchSanDiegoEvents, ticketmasterToActivity } from "@/lib/ticketmaster";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { enrichActivitiesWithTags } from "@/lib/activity-enrichment";
-import { buildActivityDedupeKey } from "@/lib/interest-tags";
+import { buildActivityDedupeKey, preferDuplicateCandidate } from "@/lib/interest-tags";
 
 const LEGACY_TAGS = new Set(["live-music", "sports", "arts-culture", "food-drink", "outdoors", "learning", "games", "volunteering", "nightlife", "wellness", "thrifting", "community"]);
 
@@ -18,7 +18,8 @@ export async function POST(request: Request) {
     for (const event of events) {
       const activity = ticketmasterToActivity(event);
       const key = buildActivityDedupeKey(activity);
-      if (!incomingByKey.has(key)) incomingByKey.set(key, activity);
+      const current = incomingByKey.get(key);
+      incomingByKey.set(key, current ? preferDuplicateCandidate(current, activity) : activity);
     }
 
     const { data: existingRows, error: existingError } = await supabase
