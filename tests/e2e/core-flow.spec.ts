@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("demo onboarding reaches Discovery without creating an account", async ({ page }) => {
   await page.goto("/signup");
-  await page.getByRole("button", { name: "Continue as demo" }).click();
+  await page.getByRole("link", { name: "Continue as demo" }).click();
   await expect(page.getByRole("heading", { name: "What are you into?" })).toBeVisible();
 
   for (const interest of ["Live music", "Coffee", "City walks", "Museums", "Trying new food"]) {
@@ -16,14 +16,21 @@ test("demo onboarding reaches Discovery without creating an account", async ({ p
 
   await expect(page).toHaveURL(/\/feed$/);
   await expect(page.getByRole("heading", { name: "Discover" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "No activities nearby yet" })).toBeVisible();
   await expect.poll(() => page.evaluate(() => sessionStorage.getItem("dyad-app-mode"))).toBe("demo");
+
+  const firstActivity = page.getByRole("region", { name: "Nearby activities" }).locator("article").first();
+  const firstTitle = await firstActivity.getByRole("heading").innerText();
+  await firstActivity.getByRole("button", { name: "Interested" }).click();
+  await firstActivity.getByRole("button", { name: `Save ${firstTitle}` }).click();
 
   await page.getByRole("link", { name: "My Activities" }).click();
   await expect(page.getByRole("heading", { name: "Your groups" })).toBeVisible();
-  await expect(page.getByText("You haven’t marked any upcoming activities as interested.")).toBeVisible();
-  await expect(page.getByText("Save an activity to keep it handy without making yourself visible.")).toBeVisible();
+  await expect(page.getByText(firstTitle, { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Go to Discovery" }).first()).toHaveAttribute("href", "/feed");
+
+  await page.getByRole("searchbox", { name: "Search your activities" }).fill("no-such-dyad-activity");
+  await expect(page.getByText("No interested activities match your search.")).toBeVisible();
+  await expect(page.getByText("No saved activities match your search.")).toBeVisible();
 });
 
 test("real account forms collect email and password", async ({ page }) => {

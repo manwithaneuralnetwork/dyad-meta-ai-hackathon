@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import styles from "../dyad.module.css";
 import SmartBackButton from "../smart-back-button";
-import { startDemoSession, startRealSession } from "@/lib/app-session";
+import { startRealSession } from "@/lib/app-session";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 function Logo() {
@@ -51,11 +51,6 @@ export default function LoginPage() {
     router.refresh();
   }
 
-  function handleDemo() {
-    startDemoSession();
-    router.push("/onboarding/interests");
-  }
-
   return (
     <main className={styles.pageBackdrop}>
       <section className={`${styles.mobilePage} ${styles.authPage}`}>
@@ -83,7 +78,7 @@ export default function LoginPage() {
           </form>
 
           <div className={styles.authDivider}><span>OR</span></div>
-          <button className={styles.authDemoButton} type="button" onClick={handleDemo}><span>D</span>Continue as demo</button>
+          <Link className={styles.authDemoButton} href="/api/session/demo"><span>D</span>Continue as demo</Link>
           <p className={styles.authDemoNote}>No account required · resets when this session ends</p>
           <p className={styles.accountSwitch}>New to Dyad? <Link href="/signup">Create an account</Link></p>
         </div>
