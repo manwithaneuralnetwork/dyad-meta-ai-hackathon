@@ -1,6 +1,6 @@
 # Dyad golden-path readiness
 
-Status: **pre-implementation decisions locked; golden-path work has not started.**
+Status: **Checkpoint 1 complete: identity and onboarding foundation implemented.**
 
 This document is the implementation contract for the hackathon build. It replaces the behavior assumptions in the earlier implementation while preserving the approved mobile UI.
 
@@ -79,7 +79,7 @@ Every transition needs a loading state, success feedback, and a recoverable erro
 | --- | --- | --- |
 | Meta Model API | Visible AI output | Key configured and live request verified |
 | Ticketmaster Discovery API | Official San Diego event source | Key configured and live request verified |
-| Supabase | Persistent real accounts, user data, and Realtime chat | Project connected; fresh schema still required |
+| Supabase | Persistent real accounts, user data, and Realtime chat | Identity schema deployed; social/activity schema comes in later checkpoints |
 | Google OAuth | Not required for judge path | Do not configure yet |
 | Scheduled sync | Optional pre-demo refresh | Cron secret configured; hosting scheduler undecided |
 
@@ -100,6 +100,13 @@ All options must use grounded activity IDs and verified event facts. Private cha
 ## Demo access decision
 
 The Google OAuth control has been replaced with a prominent `Continue as demo` button. Email/password forms are reserved for genuine Supabase accounts and must never pretend to authenticate. Demo mode states that its data resets with the session. Do not configure Google OAuth for the hackathon path.
+
+## Implementation checkpoints
+
+1. **Identity and onboarding — complete.** Real email/password accounts use Supabase Auth. Profiles, interests, and private locations persist behind RLS. Demo onboarding uses `sessionStorage` only.
+2. **Discovery and activity state.** Replace feed fixtures with a shared activity catalog, then persist Interested, Saved, and Find company state for real users while retaining a deterministic demo repository.
+3. **Groups and live chat.** Persist invitations, group membership, and messages; enforce membership with RLS; subscribe to messages with Realtime.
+4. **Judge hardening and deploy.** Connect the visible Meta moment, exercise fallbacks, deploy, run the production smoke suite, and rehearse the three-minute path.
 
 ## Failure strategy
 

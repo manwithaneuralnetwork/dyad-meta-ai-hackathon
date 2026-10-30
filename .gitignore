@@ -11,4 +11,5 @@ test-results/
 server.out.log
 server.err.log
 dev-server*.log
+.next-dev.*.log
 tmp/

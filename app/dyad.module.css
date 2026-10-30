@@ -280,6 +280,10 @@
 .authForm input::placeholder { color: #969e9a; }
 .authPrimaryButton { display: inline-flex; width: 100%; min-height: 52px; align-items: center; justify-content: center; gap: 8px; margin-top: 4px; border-radius: 14px; background: var(--dyad-ink); color: white; font-size: 14px; font-weight: 800; }
 .authPrimaryButton svg { color: var(--dyad-aqua); }
+.authPrimaryButton:disabled { cursor: wait; opacity: .65; }
+.authError, .authSuccess { margin: 2px 4px 0; font-size: 11px; line-height: 1.4; text-align: center; }
+.authError { color: #a73535; }
+.authSuccess { color: var(--dyad-aqua-deep); }
 .authDivider { display: flex; align-items: center; gap: 12px; margin: 23px 0 17px; color: #959c99; font-size: 9px; font-weight: 780; letter-spacing: 1px; }
 .authDivider::before, .authDivider::after { content: ""; height: 1px; flex: 1; background: var(--dyad-border); }
 .authDemoButton { display: flex; width: 100%; min-height: 50px; align-items: center; justify-content: center; gap: 10px; border: 1px solid #cfd5d2; border-radius: 14px; background: white; color: var(--dyad-ink); font-size: 13px; font-weight: 770; }
@@ -425,6 +429,7 @@
 .onboardingFooter { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 13px 22px calc(13px + env(safe-area-inset-bottom)); border-top: 1px solid var(--dyad-border); background: rgba(255,255,255,.96); }
 .onboardingFooter > span { color: var(--dyad-muted); font-size: 10px; font-weight: 700; }
 .onboardingNext { display: inline-flex; min-width: 112px; min-height: 43px; align-items: center; justify-content: center; gap: 7px; border-radius: 999px; background: var(--dyad-ink); color: white; font-size: 12px; font-weight: 800; }
+.onboardingNext:disabled { cursor: not-allowed; opacity: .38; }
 .locationBody { padding-top: 45px; }
 .locationShareButton { display: grid; width: 100%; grid-template-columns: 40px 1fr 20px; align-items: center; gap: 11px; padding: 14px; border: 1px solid var(--dyad-border); border-radius: 16px; background: white; color: var(--dyad-ink); text-align: left; }
 .locationShareButton > span:first-child { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--dyad-aqua); }
