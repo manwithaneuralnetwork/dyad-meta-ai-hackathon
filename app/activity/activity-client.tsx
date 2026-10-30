@@ -29,7 +29,6 @@ export default function ActivityClient({ activityId, openCompanyInitially }: { a
   const [loading, setLoading] = useState(Boolean(activityId));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [showInterestNotice, setShowInterestNotice] = useState(false);
 
   const load = useCallback(async () => {
     if (!activityId) return;
@@ -49,7 +48,6 @@ export default function ActivityClient({ activityId, openCompanyInitially }: { a
       setViewer(nextViewer);
       setState(nextStates[activityId] ?? emptyUiState);
       setPeopleCount(nextCount);
-      setShowInterestNotice(false);
     } catch {
       setError("This activity couldn’t be loaded right now.");
     } finally {
@@ -91,8 +89,7 @@ export default function ActivityClient({ activityId, openCompanyInitially }: { a
 
   async function toggleInterested() {
     const interested = !state.interested;
-    const saved = await persist({ ...state, interested, discoverable: interested });
-    setShowInterestNotice(saved && interested);
+    await persist({ ...state, interested, discoverable: interested });
   }
 
   return (
@@ -111,11 +108,11 @@ export default function ActivityClient({ activityId, openCompanyInitially }: { a
           <h1 className={styles.activityHeading}>{activity.title}</h1>
           {activity.topics.length ? <div className={styles.tagList} aria-label="Activity topics">{activity.topics.map((topic) => <span className={styles.tag} key={topic}>{topic}</span>)}</div> : null}
 
-          <div className={`${styles.activityActions} ${showInterestNotice ? styles.activityActionsWithNotice : ""}`}>
+          <div className={`${styles.activityActions} ${state.interested ? styles.activityActionsWithNotice : ""}`}>
             <button className={`${styles.activityAction} ${state.interested ? styles.actionSelected : ""}`} type="button" disabled={busy} onClick={() => void toggleInterested()}><Heart size={16} fill={state.interested ? "currentColor" : "none"} />Interested</button>
             <FindCompanySheet activity={activity} viewer={viewer} initiallyOpen={openCompanyInitially} onActivate={() => persist({ ...state, interested: true, discoverable: true })} />
           </div>
-          {showInterestNotice ? <p className={styles.interestNotice} role="status">You’re now open to invitations from other Interested people.</p> : null}
+          {state.interested ? <p className={styles.interestNotice} role="status">You’re open to invitations from other Interested people.</p> : null}
           {error ? <p className={styles.pageError} role="alert">{error}</p> : null}
 
           <dl className={styles.activityFacts}>{facts.map(({ label, value, Icon }) => <div className={styles.activityFact} key={label}><span className={styles.factIcon}><Icon size={17} aria-hidden="true" /></span><div><dt>{label}</dt><dd>{value}</dd></div></div>)}</dl>

@@ -1,16 +1,35 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CalendarDays, Compass, MessageCircle, UserRound } from "lucide-react";
 import styles from "./dyad.module.css";
+import { getAppMode } from "@/lib/app-session";
+import { getViewerProfile, resolveViewer } from "@/lib/activity-data";
 
 export function Logo() {
   return <span className={styles.logo}><span className={styles.logoMark}><span /></span><span>dyad</span></span>;
 }
 
 export function AppHeader() {
+  const [viewerName, setViewerName] = useState("");
+
+  useEffect(() => {
+    void (async () => {
+      if (getAppMode() === "demo") {
+        setViewerName("Demo");
+        return;
+      }
+      const viewer = await resolveViewer();
+      const profile = await getViewerProfile(viewer);
+      setViewerName(profile?.display_name || "You");
+    })();
+  }, []);
+
   return (
     <header className={styles.feedHeader}>
       <Logo />
-      <Link className={styles.profileBadge} href="/you" aria-label="Open your profile"><UserRound size={17} /></Link>
+      <Link className={styles.profileSummary} href="/you" aria-label="Open your profile"><span>{viewerName}</span><span className={styles.profileBadge}><UserRound size={17} /></span></Link>
     </header>
   );
 }

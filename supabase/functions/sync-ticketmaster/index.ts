@@ -151,7 +151,7 @@ async function enrichBatch(batch: ReturnType<typeof normalizeEvent>[]) {
       body: JSON.stringify({
         model: META_MODEL,
         messages: [
-          { role: "developer", content: "For every public activity, create an informative display title and assign 1 to 6 interest tags. A display title must be concise, preserve the event or performer identity, and make the activity type clear when the source title is vague (for example, 'Knox' becomes 'Knox Concert'). Keep an already-informative source title when changing it would not help. Do not add dates, venues, genres, or other facts unless they are supported by the supplied activity. Prefer the supplied tag catalog. Create a concise neutral activity-topic tag only if the catalog is insufficient. Never create demographic, identity, health, political, religious, or sensitive-trait tags. Return every externalId exactly once and do not invent facts." },
+          { role: "developer", content: "For every public activity, create an informative display title and assign 1 to 6 interest tags. A display title must be concise, preserve the event or performer identity, and make the activity type clear when the source title is vague (for example, 'Knox' becomes 'Knox Concert'). Keep an already-informative source title when changing it would not help. Do not add dates, venues, genres, or other facts unless they are supported by the supplied activity. Tags must describe the primary reason someone would attend, never incidental amenities or venue copy. Ignore concessions, restaurants, bars, parking, sponsors, and secondary details. Only assign Food & drink or Trying new food when dining, tasting, cooking, or drinks are a central purpose of the event. Only assign Outdoors when the outdoor setting or outdoor activity is central, not merely because a venue happens to be outside. Prefer the supplied tag catalog. Create a concise neutral activity-topic tag only if the catalog is insufficient. Never create demographic, identity, health, political, religious, or sensitive-trait tags. Return every externalId exactly once and do not invent facts." },
           { role: "user", content: JSON.stringify({ catalogTags: CORE_TAGS, activities: batch.map((item) => ({ externalId: item.external_id, title: item.title, description: item.description, venue: item.venue_name })) }) },
         ],
         response_format: { type: "json_schema", json_schema: { name: "dyad_activity_tags", strict: true, schema: tagsSchema() } },
@@ -226,6 +226,7 @@ function normalizeTags(values: unknown, activity: ReturnType<typeof normalizeEve
     const cleaned = value.replace(/\s+/g, " ").trim().replace(/^[#.,;:!\-–—]+|[#.,;:!\-–—]+$/g, "");
     if (!cleaned || cleaned.length > 60) continue;
     const tag = coreByLower.get(cleaned.toLowerCase()) ?? `${cleaned.charAt(0).toUpperCase()}${cleaned.slice(1)}`;
+    if (!isPrimaryPurposeTag(tag, activity)) continue;
     unique.set(tag.toLowerCase(), tag);
   }
   return unique.size ? [...unique.values()].slice(0, 6) : heuristicTags(activity);
@@ -233,19 +234,27 @@ function normalizeTags(values: unknown, activity: ReturnType<typeof normalizeEve
 
 function heuristicTags(activity: ReturnType<typeof normalizeEvent>) {
   const text = `${activity.title} ${activity.description} ${activity.venue_name}`.toLowerCase();
+  const title = activity.title.toLowerCase();
   const tags: string[] = [];
   const add = (...items: string[]) => items.forEach((item) => { if (!tags.includes(item)) tags.push(item); });
   if (/concert|music|band|orchestra|jazz|rock|hip-hop|rap|dj\b/.test(text)) add("Live music");
   if (/comedy|comedian|stand-up/.test(text)) add("Comedy", "Nightlife");
   if (/theatre|theater|musical|ballet|opera/.test(text)) add("Theatre");
   if (/baseball|football|soccer|basketball|hockey|tennis|sport/.test(text)) add("Casual sports");
-  if (/food|tasting|dinner|beer|wine|cocktail/.test(text)) add("Food & drink", "Trying new food");
+  if (/food|tasting|dinner|brunch|culinary|cooking|beer|wine|cocktail|brew|cuisine|restaurant|market/.test(title)) add("Food & drink", "Trying new food");
   if (/festival|fair/.test(text)) add("Festivals");
-  if (/outdoor|park|garden|nature|beach/.test(text)) add("Outdoors");
+  if (/outdoor|open air|park|garden|nature|beach|hike|trail|camp|kayak|surf/.test(title)) add("Outdoors");
   if (/dance|dancing|salsa/.test(text)) add("Dancing");
   if (/night|evening|after hours/.test(text)) add("Nightlife");
   if (!tags.length) add("Community");
   return tags.slice(0, 6);
+}
+
+function isPrimaryPurposeTag(tag: string, activity: ReturnType<typeof normalizeEvent>) {
+  const title = activity.title.toLowerCase();
+  if (["Food & drink", "Trying new food"].includes(tag)) return /food|tasting|dinner|brunch|culinary|cooking|beer|wine|cocktail|brew|cuisine|restaurant|market/.test(title);
+  if (tag === "Outdoors") return /outdoor|open air|park|garden|nature|beach|hike|trail|camp|kayak|surf/.test(title);
+  return true;
 }
 
 function compact(value: string) { return value.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, ""); }

@@ -18,7 +18,7 @@ export default function LocationPage() {
   const router = useRouter();
   const [address, setAddress] = useState("");
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
-  const [status, setStatus] = useState<"idle" | "locating" | "shared" | "denied">("idle");
+  const [status, setStatus] = useState<"idle" | "locating" | "shared" | "denied" | "outside">("idle");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -27,6 +27,11 @@ export default function LocationPage() {
     setError("");
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        if (!isSanDiegoArea(position.coords.latitude, position.coords.longitude)) {
+          setCoordinates(null);
+          setStatus("outside");
+          return;
+        }
         setCoordinates({ latitude: position.coords.latitude, longitude: position.coords.longitude });
         setStatus("shared");
       },
@@ -35,10 +40,14 @@ export default function LocationPage() {
     );
   }
 
-  async function finish() {
-    const trimmedAddress = address.trim();
+  async function finish(addressOverride?: string) {
+    const trimmedAddress = (addressOverride ?? address).trim();
     if (!coordinates && !trimmedAddress) {
       setError("Share your location or enter an address to continue.");
+      return;
+    }
+    if (!coordinates && !isSanDiegoAddress(trimmedAddress)) {
+      setError("For now, enter a San Diego County address to continue.");
       return;
     }
 
@@ -99,21 +108,35 @@ export default function LocationPage() {
             <ArrowRight size={18} />
           </button>
           {status === "denied" && <p className={styles.settingsError}>Location wasn’t available. Enter your address below instead.</p>}
+          {status === "outside" && <p className={styles.settingsError}>Dyad is currently available in San Diego County. More cities are opening soon.</p>}
 
           <div className={styles.locationDivider}><span>OR</span></div>
           <label className={styles.locationField}>
-            <span>Enter your street address</span>
-            <span className={styles.locationInputWrap}><MapPin size={17} /><input type="text" value={address} onChange={(event) => setAddress(event.target.value)} placeholder="123 Main St, San Diego, CA" /></span>
+            <span>Enter a San Diego street address</span>
+            <span className={styles.locationInputWrap}><MapPin size={17} /><input type="text" value={address} onChange={(event) => setAddress(event.target.value)} placeholder="9500 Gilman Dr, La Jolla, CA" /></span>
           </label>
           <p className={styles.locationNote}>Your precise location stays private. Other people will only see the city you choose.</p>
+          <div className={styles.regionAvailability}>
+            <p><strong>Available now</strong><span>San Diego County</span></p>
+            <button className={styles.sanDiegoButton} type="button" onClick={() => void finish("9500 Gilman Dr, La Jolla, CA 92093")} disabled={saving}><MapPin size={16} /><span><strong>Continue with San Diego</strong><small>9500 Gilman Dr · 15-mile radius</small></span><ArrowRight size={17} /></button>
+            <button className={styles.regionUnavailable} type="button" disabled><MapPin size={16} /><span><strong>Choose another region</strong><small>More cities are opening soon</small></span></button>
+          </div>
           {error ? <p className={styles.settingsError} role="alert">{error}</p> : null}
         </div>
 
         <footer className={styles.onboardingFooter}>
           <span>That’s everything</span>
-          <button className={styles.onboardingNext} type="button" onClick={finish} disabled={saving || (!coordinates && !address.trim())}>{saving ? "Saving…" : "Finish"}<ArrowRight size={17} /></button>
+          <button className={styles.onboardingNext} type="button" onClick={() => void finish()} disabled={saving || (!coordinates && !address.trim())}>{saving ? "Saving…" : "Finish"}<ArrowRight size={17} /></button>
         </footer>
       </section>
     </main>
   );
+}
+
+function isSanDiegoArea(latitude: number, longitude: number) {
+  return latitude >= 32.53 && latitude <= 33.51 && longitude >= -117.61 && longitude <= -116.08;
+}
+
+function isSanDiegoAddress(address: string) {
+  return /san diego|la jolla|chula vista|el cajon|escondido|oceanside|carlsbad|encinitas|vista|san marcos|national city|coronado|poway|santee|lemon grove|imperial beach|\b(?:919|920|921)\d{2}\b/i.test(address);
 }

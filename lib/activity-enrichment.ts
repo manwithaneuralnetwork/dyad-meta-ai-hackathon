@@ -28,6 +28,8 @@ async function enrichBatch<T extends ActivityTagInput>(activities: T[]): Promise
       system: [
         "You classify public activities for Dyad, a friendship-through-activities app.",
         "Assign 1 to 6 concise interest tags to every activity. Prefer the supplied catalog tags.",
+        "Tags must describe the primary reason someone would attend, not incidental amenities or details mentioned in venue copy.",
+        "Ignore concessions, restaurants, bars, parking, sponsors, and other secondary details. Only use Food & drink or Trying new food when dining, tasting, cooking, or drinks are a central purpose of the activity.",
         "Create a new tag only when the catalog cannot accurately describe a meaningful activity topic.",
         "New tags must be neutral activity topics, 1 to 3 words, and must never describe demographics, identity, health, politics, religion, or sensitive traits.",
         "Return every externalId exactly once and do not invent facts.",
@@ -67,13 +69,24 @@ async function enrichBatch<T extends ActivityTagInput>(activities: T[]): Promise
     const tagsById = new Map(result.data.activities.map((item) => [item.externalId, item.tags]));
     return activities.map((activity) => ({
       activity,
-      tags: normalizeInterestTags(tagsById.get(activity.externalId ?? "") ?? [], `${activity.title} ${activity.description} ${activity.venue}`),
+      tags: filterPrimaryPurposeTags(normalizeInterestTags(tagsById.get(activity.externalId ?? "") ?? [], `${activity.title} ${activity.description} ${activity.venue}`), activity),
       usedAi: true,
     }));
   } catch (error) {
     console.warn("AI activity tagging fell back to deterministic classification", error instanceof Error ? error.message : error);
     return fallback();
   }
+}
+
+function filterPrimaryPurposeTags(tags: string[], activity: ActivityTagInput) {
+  const title = activity.title.toLowerCase();
+  const foodIsCore = /food|tasting|dinner|brunch|culinary|cooking|beer|wine|cocktail|brew|cuisine|restaurant|market/.test(title);
+  const outdoorsIsCore = /outdoor|open air|park|garden|nature|beach|hike|trail|camp|kayak|surf/.test(title);
+  return tags.filter((tag) => {
+    if (["Food & drink", "Trying new food"].includes(tag)) return foodIsCore;
+    if (tag === "Outdoors") return outdoorsIsCore;
+    return true;
+  });
 }
 
 export async function enrichActivitiesWithTags<T extends ActivityTagInput>(activities: T[]): Promise<EnrichedActivity<T>[]> {
