@@ -24,7 +24,20 @@ export type GroupDetail = {
   accepted: boolean;
   members: Array<{ profile: PublicProfile; joinedAt: string; role: string }>;
   acceptedInvites: Array<{ profile: PublicProfile; acceptedAt: string }>;
+  invitationCounts: { total: number; pending: number; accepted: number; declined: number };
+  canScrap: boolean;
   messages: GroupMessage[];
+};
+
+export type InboxNotification = {
+  id: string;
+  kind: "group_invite" | "invite_response";
+  activity: ActivityRecord;
+  groupId: string;
+  createdAt: string;
+  title: string;
+  body: string;
+  unread: boolean;
 };
 
 export async function createActivityGroup(activityId: string, inviteeIds: string[], viewer: Viewer) {
@@ -89,7 +102,66 @@ export async function listMyGroups(viewer: Viewer): Promise<GroupSummary[]> {
       lastActivityAt: message?.created_at || group.last_message_at,
       inviterName: pendingInviter ? inviterById.get(pendingInviter) || "Someone" : undefined,
     }];
+  }).sort((left, right) => {
+    if (left.status !== right.status) return left.status === "pending" ? -1 : 1;
+    return +new Date(right.lastActivityAt) - +new Date(left.lastActivityAt);
   });
+}
+
+export async function listInboxNotifications(viewer: Viewer): Promise<InboxNotification[]> {
+  if (viewer.kind !== "real") return [];
+  const supabase = createSupabaseBrowserClient();
+  if (!supabase) return [];
+
+  const { data: invites, error: invitesError } = await supabase
+    .from("group_invites")
+    .select("*")
+    .or(`invitee_id.eq.${viewer.userId},inviter_id.eq.${viewer.userId}`)
+    .order("created_at", { ascending: false });
+  if (invitesError) throw invitesError;
+
+  const relevantInvites = invites.filter((invite) =>
+    (invite.invitee_id === viewer.userId && invite.status === "pending")
+    || (invite.inviter_id === viewer.userId && invite.status !== "pending")
+  );
+  if (!relevantInvites.length) return [];
+
+  const groupIds = [...new Set(relevantInvites.map((invite) => invite.group_id))];
+  const { data: groups, error: groupsError } = await supabase.from("groups").select("id, activity_id").in("id", groupIds);
+  if (groupsError) throw groupsError;
+  const activityIds = [...new Set(groups.map((group) => group.activity_id))];
+  const profileIds = [...new Set(relevantInvites.map((invite) => invite.invitee_id === viewer.userId ? invite.inviter_id : invite.invitee_id))];
+  const [activitiesResult, profilesResult] = await Promise.all([
+    supabase.from("activities").select("*").in("id", activityIds),
+    supabase.from("profiles").select("id, display_name").in("id", profileIds),
+  ]);
+  if (activitiesResult.error) throw activitiesResult.error;
+  if (profilesResult.error) throw profilesResult.error;
+
+  const groupById = new Map(groups.map((group) => [group.id, group]));
+  const activityById = new Map(activitiesResult.data.map((activity) => [activity.id, activity]));
+  const nameById = new Map(profilesResult.data.map((profile) => [profile.id, profile.display_name]));
+
+  return relevantInvites.flatMap((invite) => {
+    const group = groupById.get(invite.group_id);
+    const activity = group ? activityById.get(group.activity_id) : undefined;
+    if (!activity) return [];
+    const incoming = invite.invitee_id === viewer.userId;
+    const personId = incoming ? invite.inviter_id : invite.invitee_id;
+    const personName = nameById.get(personId) || "Someone";
+    return [{
+      id: invite.id,
+      kind: incoming ? "group_invite" as const : "invite_response" as const,
+      activity,
+      groupId: invite.group_id,
+      createdAt: invite.responded_at || invite.created_at,
+      title: incoming ? "New group invitation" : `Invitation ${invite.status}`,
+      body: incoming
+        ? `${personName} invited you to ${activity.title}.`
+        : `${personName} ${invite.status} your invitation to ${activity.title}.`,
+      unread: incoming || Boolean(invite.responded_at),
+    }];
+  }).sort((left, right) => +new Date(right.createdAt) - +new Date(left.createdAt));
 }
 
 export async function getGroupDetail(groupId: string, viewer: Viewer): Promise<GroupDetail | null> {
@@ -108,13 +180,14 @@ export async function getGroupDetail(groupId: string, viewer: Viewer): Promise<G
 
   const [membersResult, inviteResult, messagesResult] = await Promise.all([
     supabase.from("group_members").select("user_id, role, joined_at").eq("group_id", groupId).order("joined_at"),
-    supabase.from("group_invites").select("invitee_id, responded_at").eq("group_id", groupId).eq("status", "accepted").order("responded_at"),
+    supabase.from("group_invites").select("invitee_id, status, responded_at").eq("group_id", groupId).order("created_at"),
     accepted ? supabase.from("messages").select("*").eq("group_id", groupId).order("created_at") : Promise.resolve({ data: [], error: null }),
   ]);
   if (membersResult.error) throw membersResult.error;
   if (inviteResult.error) throw inviteResult.error;
   if (messagesResult.error) throw messagesResult.error;
-  const profileIds = [...new Set([...membersResult.data.map((row) => row.user_id), ...inviteResult.data.map((row) => row.invitee_id)])];
+  const acceptedInviteRows = inviteResult.data.filter((row) => row.status === "accepted");
+  const profileIds = [...new Set([...membersResult.data.map((row) => row.user_id), ...acceptedInviteRows.map((row) => row.invitee_id)])];
   const { data: profiles, error: profilesError } = profileIds.length
     ? await supabase.from("profiles").select("*").in("id", profileIds)
     : { data: [], error: null };
@@ -131,10 +204,20 @@ export async function getGroupDetail(groupId: string, viewer: Viewer): Promise<G
       const profile = profileById.get(row.user_id);
       return profile ? [{ profile, joinedAt: row.joined_at, role: row.role }] : [];
     }),
-    acceptedInvites: inviteResult.data.flatMap((row) => {
+    acceptedInvites: acceptedInviteRows.flatMap((row) => {
       const profile = profileById.get(row.invitee_id);
       return profile && row.responded_at ? [{ profile, acceptedAt: row.responded_at }] : [];
     }),
+    invitationCounts: {
+      total: inviteResult.data.length,
+      pending: inviteResult.data.filter((row) => row.status === "pending").length,
+      accepted: acceptedInviteRows.length,
+      declined: inviteResult.data.filter((row) => row.status === "declined").length,
+    },
+    canScrap: group.created_by === viewer.userId
+      && inviteResult.data.length > 0
+      && inviteResult.data.every((row) => row.status === "declined")
+      && membersResult.data.every((row) => row.user_id === viewer.userId),
     messages: messagesResult.data,
   };
 }
@@ -166,6 +249,13 @@ export async function leaveGroup(groupId: string, userId: string) {
   const supabase = createSupabaseBrowserClient();
   if (!supabase) throw new Error("Group service is not configured.");
   const { error } = await supabase.from("group_members").delete().eq("group_id", groupId).eq("user_id", userId);
+  if (error) throw error;
+}
+
+export async function scrapGroup(groupId: string) {
+  const supabase = createSupabaseBrowserClient();
+  if (!supabase) throw new Error("Group service is not configured.");
+  const { error } = await supabase.from("groups").delete().eq("id", groupId);
   if (error) throw error;
 }
 

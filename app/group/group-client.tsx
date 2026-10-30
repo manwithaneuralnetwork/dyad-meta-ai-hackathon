@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Compass, MessageCircle, Send } from "lucide-react";
+import { Compass, MessageCircle, Send, Trash2 } from "lucide-react";
 import styles from "../dyad.module.css";
 import ChatHeader from "./chat-header";
 import InvitePeopleSheet from "./invite-people-sheet";
 import { activityLocation, resolveViewer, type Viewer } from "@/lib/activity-data";
-import { getGroupDetail, leaveGroup, respondToInvite, sendGroupMessage, subscribeToGroupMessages, unsubscribeFromGroup, type GroupDetail, type GroupMessage } from "@/lib/group-data";
+import { getGroupDetail, leaveGroup, respondToInvite, scrapGroup, sendGroupMessage, subscribeToGroupMessages, unsubscribeFromGroup, type GroupDetail, type GroupMessage } from "@/lib/group-data";
 
 type TimelineItem =
   | { id: string; kind: "notice"; at: string; text: string }
@@ -108,6 +108,20 @@ export default function GroupClient({ groupId }: { groupId: string }) {
     }
   }
 
+  async function scrap() {
+    if (!detail?.canScrap || !window.confirm("Close this group permanently? It will disappear from Chats.")) return;
+    setBusy(true);
+    setError("");
+    try {
+      await scrapGroup(groupId);
+      router.replace("/chats");
+      router.refresh();
+    } catch {
+      setError("This group couldn’t be closed right now.");
+      setBusy(false);
+    }
+  }
+
   if (loading) return <GroupEmpty title="Loading conversation…" />;
   if (!detail) return <GroupEmpty title="Conversation not found" body={error || "It may have been removed or you may no longer have access."} />;
 
@@ -130,6 +144,13 @@ export default function GroupClient({ groupId }: { groupId: string }) {
           <>
             <div className={styles.chatScroll} ref={scrollRef}>
               <p className={styles.chatDay}>Conversation</p>
+              {detail.canScrap ? (
+                <section className={styles.scrapGroupCard}>
+                  <span><Trash2 size={18} /></span>
+                  <div><strong>Everyone passed this time</strong><p>All invitations were declined. Close this unused group to remove it permanently.</p></div>
+                  <button type="button" disabled={busy} onClick={() => void scrap()}>{busy ? "Closing…" : "Close group"}</button>
+                </section>
+              ) : null}
               {timeline.map((item) => {
                 if (item.kind === "notice") return <p className={item.id === "created" ? styles.chatNotice : styles.chatEvent} key={item.id}>{item.text}</p>;
                 const own = viewer.kind === "real" && item.message.sender_id === viewer.userId;

@@ -14,6 +14,14 @@ function Logo() {
   return <span className={styles.logo}><span className={styles.logoMark}><span /></span><span>dyad</span></span>;
 }
 
+function getSignUpErrorMessage(code: string | undefined, message: string) {
+  if (code === "over_email_send_rate_limit" || message.toLowerCase().includes("email rate limit")) {
+    return "Dyad’s confirmation-email allowance is temporarily full. Please try again in about an hour, or continue as a demo now.";
+  }
+
+  return message;
+}
+
 export default function SignUpPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -43,7 +51,7 @@ export default function SignUpPage() {
     });
 
     if (signUpError) {
-      setError(signUpError.message);
+      setError(getSignUpErrorMessage(signUpError.code, signUpError.message));
       setLoading(false);
       return;
     }

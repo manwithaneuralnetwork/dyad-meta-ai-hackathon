@@ -2,16 +2,17 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Bell, ChevronRight, MapPin, Pencil, Tags } from "lucide-react";
+import { Bell, ChevronRight, Inbox, MapPin, Pencil, Tags } from "lucide-react";
 import styles from "../dyad.module.css";
 import { AppHeader, BottomNavigation } from "../app-navigation";
 import { getViewerProfile, resolveViewer, type PublicProfile, type Viewer } from "@/lib/activity-data";
 
 const accountSettings = [
+  { label: "Inbox", detail: "Invitations and plan updates", href: "/inbox", Icon: Inbox },
   { label: "Edit profile", detail: "Photo, bio, and one-liner", href: "/settings/profile", Icon: Pencil },
   { label: "Location & distance", detail: "Shared location or a street address", href: "/settings/location", Icon: MapPin },
   { label: "Interests", detail: "Manage what shows up in Discovery", href: "/settings/interests", Icon: Tags },
-  { label: "Notifications", detail: "Invites, chats, and activity updates", href: "/settings/notifications", Icon: Bell },
+  { label: "Notifications", detail: "Choose which updates reach you", href: "/settings/notifications", Icon: Bell },
 ] as const;
 
 export default function YouPage() {
