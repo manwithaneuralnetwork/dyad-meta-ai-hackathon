@@ -1,79 +1,103 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { CalendarDays, ChevronRight, Compass, MessageCircle, Search, UserRound } from "lucide-react";
+import { CalendarDays, ChevronRight, Compass, MessageCircle, Search } from "lucide-react";
 import styles from "../dyad.module.css";
+import { AppHeader, BottomNavigation } from "../app-navigation";
+import {
+  activityLocation,
+  formatActivityDate,
+  listActivities,
+  loadActivityStates,
+  resolveViewer,
+  type ActivityRecord,
+  type ActivityUiState,
+} from "@/lib/activity-data";
 
-const groupActivities = [
-  { title: "Jazz in the Courtyard", detail: "Maya: I’ll drop one here before we head over.", meta: "10:53 AM", art: "jazz", href: "/group" },
-  { title: "Beginner Woodworking Workshop", detail: "Eli: I can bring an extra pair of gloves.", meta: "Yesterday", art: "workshop", href: "/group" },
-] as const;
-
-const interestedActivities = [
-  { title: "San Diego Museum of Art: After Hours", detail: "1450 El Prado", meta: "Sat, Nov 7 · 6:00 PM", art: "museum", href: "/activity" },
-  { title: "Civic Theatre: The California Sound", detail: "1100 Third Ave", meta: "Sun, Nov 8 · 7:00 PM", art: "theatre", href: "/activity" },
-] as const;
-
-const savedActivities = [
-  { title: "Harbor Pottery Social", detail: "Barrio Logan Arts District", meta: "Thu, Nov 12 · 6:30 PM", art: "workshop", href: "/activity" },
-  { title: "Coffee & Street Photography", detail: "North Park Way", meta: "Sat, Nov 14 · 9:00 AM", art: "jazz", href: "/activity" },
-] as const;
-
-const pastActivities = [
-  { title: "Sunday Coastal Cleanup", detail: "Ocean Front Walk", meta: "Passed · Nov 1", art: "jazz", href: "/activity" },
-  { title: "Rooftop Film Night", detail: "Liberty Station", meta: "Passed · Oct 29", art: "museum", href: "/activity" },
-] as const;
-
-function Logo() {
-  return <span className={styles.logo}><span className={styles.logoMark}><span /></span><span>dyad</span></span>;
-}
-
-type ActivityItem = (typeof groupActivities)[number] | (typeof interestedActivities)[number] | (typeof savedActivities)[number] | (typeof pastActivities)[number];
 type ActivityKind = "group" | "interested" | "saved" | "past";
 
-function ActivityRow({ item, kind }: { item: ActivityItem; kind: ActivityKind }) {
+function ActivityRow({ activity, kind }: { activity: ActivityRecord; kind: ActivityKind }) {
   return (
-    <Link className={`${styles.myActivityRow} ${kind === "past" ? styles.myActivityPast : ""}`} href={item.href}>
-      <span className={`${styles.myActivityArt} ${styles[item.art]}`} aria-hidden="true" />
+    <Link className={`${styles.myActivityRow} ${kind === "past" ? styles.myActivityPast : ""}`} href={`/activity?id=${activity.id}`}>
+      <span className={`${styles.myActivityArt} ${!activity.image_url ? styles.jazz : ""}`} aria-hidden="true">{activity.image_url ? <img src={activity.image_url} alt="" /> : null}</span>
       <span className={styles.myActivityCopy}>
-        <span className={styles.myActivityMeta}>{kind === "group" && <MessageCircle size={11} />}{item.meta}</span>
-        <strong>{item.title}</strong>
-        <span className={styles.myActivityDetail}>{item.detail}</span>
+        <span className={styles.myActivityMeta}>{kind === "group" ? <MessageCircle size={11} /> : null}{kind === "past" ? `Passed · ${formatActivityDate(activity.starts_at)}` : formatActivityDate(activity.starts_at)}</span>
+        <strong>{activity.title}</strong>
+        <span className={styles.myActivityDetail}>{activityLocation(activity) || activity.city}</span>
       </span>
       <ChevronRight className={styles.myActivityChevron} size={18} aria-hidden="true" />
     </Link>
   );
 }
 
-function ActivitySection({ title, items, kind }: { title: string; items: readonly ActivityItem[]; kind: ActivityKind }) {
+function ActivitySection({ title, items, kind, emptyText }: { title: string; items: ActivityRecord[]; kind: ActivityKind; emptyText: string }) {
   return (
     <section className={styles.myActivitySection}>
       <div className={styles.myActivitySectionHeading}><h2>{title}</h2><span>{items.length}</span></div>
-      <div className={styles.myActivityList}>{items.map((item) => <ActivityRow item={item} kind={kind} key={item.title} />)}</div>
+      {items.length ? <div className={styles.myActivityList}>{items.map((item) => <ActivityRow activity={item} kind={kind} key={item.id} />)}</div> : (
+        <div className={styles.sectionEmptyState}><p>{emptyText}</p><Link href="/feed"><Compass size={13} />Go to Discovery</Link></div>
+      )}
     </section>
   );
 }
 
 export default function MyActivitiesPage() {
+  const [activities, setActivities] = useState<ActivityRecord[]>([]);
+  const [states, setStates] = useState<Record<string, ActivityUiState>>({});
+  const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [catalog, viewer] = await Promise.all([listActivities({ includePast: true }), resolveViewer()]);
+      const activityStates = await loadActivityStates(catalog.map((activity) => activity.id), viewer);
+      setActivities(catalog);
+      setStates(activityStates);
+    } catch {
+      setError("Your activities couldn’t be loaded right now.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const lists = useMemo(() => {
+    const now = Date.now();
+    const matches = (activity: ActivityRecord) => !query.trim() || `${activity.title} ${activity.venue_name} ${activity.address} ${activity.city}`.toLowerCase().includes(query.trim().toLowerCase());
+    const tracked = activities.filter((activity) => {
+      const state = states[activity.id];
+      return state && (state.interested || state.saved) && matches(activity);
+    });
+    return {
+      interested: tracked.filter((activity) => new Date(activity.starts_at).getTime() >= now && states[activity.id]?.interested).sort((a, b) => +new Date(a.starts_at) - +new Date(b.starts_at)),
+      saved: tracked.filter((activity) => new Date(activity.starts_at).getTime() >= now && states[activity.id]?.saved).sort((a, b) => +new Date(a.starts_at) - +new Date(b.starts_at)),
+      past: tracked.filter((activity) => new Date(activity.starts_at).getTime() < now).sort((a, b) => +new Date(b.starts_at) - +new Date(a.starts_at)),
+    };
+  }, [activities, query, states]);
+
   return (
     <main className={styles.pageBackdrop}>
       <div className={`${styles.mobilePage} ${styles.feedPage}`}>
-        <header className={styles.feedHeader}>
-          <Link href="/" aria-label="Back to Dyad home"><Logo /></Link>
-          <span className={styles.profileBadge}>SL</span>
-        </header>
+        <AppHeader />
         <div className={`${styles.feedScroll} ${styles.myActivitiesScroll}`}>
           <h1>My Activities</h1>
-          <label className={styles.activitiesSearch}><Search size={17} aria-hidden="true" /><input type="search" placeholder="Search your activities" aria-label="Search your activities" /></label>
-          <ActivitySection title="Your groups" items={groupActivities} kind="group" />
-          <ActivitySection title="Interested" items={interestedActivities} kind="interested" />
-          <ActivitySection title="Saved" items={savedActivities} kind="saved" />
-          <ActivitySection title="Past" items={pastActivities} kind="past" />
+          <label className={styles.activitiesSearch}><Search size={17} aria-hidden="true" /><input type="search" placeholder="Search your activities" aria-label="Search your activities" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
+          {error ? <p className={styles.pageError} role="alert">{error}</p> : null}
+          {loading ? <div className={styles.sectionEmptyState}><p>Loading your activities…</p></div> : (
+            <>
+              <ActivitySection title="Your groups" items={[]} kind="group" emptyText="No activity groups yet. Find company on an activity to start one." />
+              <ActivitySection title="Interested" items={lists.interested} kind="interested" emptyText={query ? "No interested activities match your search." : "You haven’t marked any upcoming activities as interested."} />
+              <ActivitySection title="Saved" items={lists.saved} kind="saved" emptyText={query ? "No saved activities match your search." : "Save an activity to keep it handy without making yourself visible."} />
+              <ActivitySection title="Past" items={lists.past} kind="past" emptyText={query ? "No past activities match your search." : "Past activities you tracked will appear here."} />
+            </>
+          )}
         </div>
-        <nav className={styles.bottomNav} aria-label="Primary navigation">
-          <Link className={styles.navItem} href="/feed"><Compass size={20} /><span>Discovery</span></Link>
-          <Link className={`${styles.navItem} ${styles.navActive}`} href="/activities"><CalendarDays size={20} /><span>My Activities</span></Link>
-          <Link className={styles.navItem} href="/chats"><MessageCircle size={20} /><span>Chats</span></Link>
-          <Link className={styles.navItem} href="/you"><UserRound size={20} /><span>You</span></Link>
-        </nav>
+        <BottomNavigation active="activities" />
       </div>
     </main>
   );

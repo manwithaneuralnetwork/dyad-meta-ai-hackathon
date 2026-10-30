@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEMO_ACTIVITIES } from "@/lib/demo-data";
+import { DEMO_ACTIVITIES } from "./matching.fixtures";
 import { buildLocalInterestProfile, rankActivities, scoreActivity } from "@/lib/matching";
 import type { OnboardingAnswers } from "@/lib/types";
 

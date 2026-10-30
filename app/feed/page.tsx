@@ -1,77 +1,132 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  Bookmark,
-  CalendarDays,
-  Compass,
-  Heart,
-  MapPin,
-  MessageCircle,
-  UserRound,
-  UsersRound,
-} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Bookmark, Heart, MapPin, RefreshCw, UsersRound } from "lucide-react";
 import styles from "../dyad.module.css";
 import EventMenu from "./event-menu";
+import { AppHeader, BottomNavigation } from "../app-navigation";
+import {
+  activityLocation,
+  formatActivityDate,
+  listActivities,
+  loadActivityStates,
+  resolveViewer,
+  saveActivityState,
+  type ActivityRecord,
+  type ActivityUiState,
+  type Viewer,
+} from "@/lib/activity-data";
 
-const events = [
-  { date: "Fri, Nov 6 · 7:30 PM", title: "Jazz in the Courtyard", address: "222 Marina Park Way", art: "jazz", href: "/activity" },
-  { date: "Sat, Nov 7 · 11:00 AM", title: "Beginner Woodworking Workshop", address: "2640 Historic Decatur Rd", art: "workshop", href: null },
-  { date: "Sat, Nov 7 · 6:00 PM", title: "San Diego Museum of Art: After Hours", address: "1450 El Prado", art: "museum", href: null },
-  { date: "Sun, Nov 8 · 7:00 PM", title: "Civic Theatre: The California Sound", address: "1100 Third Ave", art: "theatre", href: null },
-] as const;
-
-function Logo() {
-  return <span className={styles.logo}><span className={styles.logoMark}><span /></span><span>dyad</span></span>;
+function EventArtwork({ activity }: { activity: ActivityRecord }) {
+  return activity.image_url ? (
+    <span className={styles.eventArtwork}><img className={styles.eventArtworkImage} src={activity.image_url} alt="" /></span>
+  ) : <span className={`${styles.eventArtwork} ${styles.jazz}`} aria-hidden="true" />;
 }
 
-function EventRow({ event }: { event: (typeof events)[number] }) {
+function EventRow({
+  activity,
+  state,
+  busy,
+  onChange,
+  onFindCompany,
+}: {
+  activity: ActivityRecord;
+  state: ActivityUiState;
+  busy: boolean;
+  onChange: (next: ActivityUiState) => void;
+  onFindCompany: () => void;
+}) {
+  const href = `/activity?id=${activity.id}`;
   return (
     <article className={styles.eventRow}>
-      {event.href ? (
-        <Link className={styles.eventArtworkLink} href={event.href} aria-label={`Open ${event.title}`}>
-          <span className={`${styles.eventArtwork} ${styles[event.art]}`} aria-hidden="true" />
-        </Link>
-      ) : <div className={`${styles.eventArtwork} ${styles[event.art]}`} aria-hidden="true" />}
+      <Link className={styles.eventArtworkLink} href={href} aria-label={`Open ${activity.title}`}><EventArtwork activity={activity} /></Link>
       <div className={styles.eventDetails}>
-        <EventMenu href={event.href ?? "/activity"} title={event.title} />
-        <p className={styles.eventDate}>{event.date}</p>
-        <h2>{event.href ? <Link href={event.href}>{event.title}</Link> : event.title}</h2>
-        <p className={styles.eventAddress}><MapPin size={13} aria-hidden="true" />{event.address}</p>
+        <EventMenu href={href} title={activity.title} />
+        <p className={styles.eventDate}>{formatActivityDate(activity.starts_at)}</p>
+        <h2><Link href={href}>{activity.title}</Link></h2>
+        <p className={styles.eventAddress}><MapPin size={13} aria-hidden="true" />{activityLocation(activity) || activity.city}</p>
         <div className={styles.eventActions}>
-          <button className={`${styles.actionPill} ${styles.actionPrimary}`} type="button"><Heart size={12} aria-hidden="true" />Interested</button>
-          <button className={styles.actionPill} type="button"><UsersRound size={12} aria-hidden="true" />Find company</button>
+          <button className={`${styles.actionPill} ${state.interested ? styles.actionSelected : ""}`} type="button" disabled={busy} onClick={() => onChange({ ...state, interested: !state.interested })}><Heart size={12} fill={state.interested ? "currentColor" : "none"} aria-hidden="true" />Interested</button>
+          <button className={`${styles.actionPill} ${state.discoverable ? styles.actionSelected : ""}`} type="button" disabled={busy} onClick={onFindCompany}><UsersRound size={12} aria-hidden="true" />Find company</button>
         </div>
-        <button className={`${styles.iconButton} ${styles.saveButton}`} type="button" aria-label={`Save ${event.title}`}><Bookmark size={15} /></button>
+        <button className={`${styles.iconButton} ${styles.saveButton} ${state.saved ? styles.saveSelected : ""}`} type="button" disabled={busy} aria-label={`${state.saved ? "Unsave" : "Save"} ${activity.title}`} onClick={() => onChange({ ...state, saved: !state.saved })}><Bookmark size={15} fill={state.saved ? "currentColor" : "none"} /></button>
       </div>
     </article>
   );
 }
 
-function BottomNavigation() {
-  return (
-    <nav className={styles.bottomNav} aria-label="Primary navigation">
-      <Link className={`${styles.navItem} ${styles.navActive}`} href="/feed"><Compass size={20} /><span>Discovery</span></Link>
-      <Link className={styles.navItem} href="/activities"><CalendarDays size={20} /><span>My Activities</span></Link>
-      <Link className={styles.navItem} href="/chats"><MessageCircle size={20} /><span>Chats</span></Link>
-      <Link className={styles.navItem} href="/you"><UserRound size={20} /><span>You</span></Link>
-    </nav>
-  );
-}
-
 export default function FeedPage() {
+  const router = useRouter();
+  const [activities, setActivities] = useState<ActivityRecord[]>([]);
+  const [states, setStates] = useState<Record<string, ActivityUiState>>({});
+  const [viewer, setViewer] = useState<Viewer>({ kind: "anonymous" });
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [nextActivities, nextViewer] = await Promise.all([listActivities(), resolveViewer()]);
+      const nextStates = await loadActivityStates(nextActivities.map((activity) => activity.id), nextViewer);
+      setActivities(nextActivities);
+      setViewer(nextViewer);
+      setStates(nextStates);
+    } catch {
+      setError("Discovery couldn’t load right now. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void load(); }, [load]);
+
+  async function updateState(activityId: string, next: ActivityUiState, openCompany = false) {
+    const previous = states[activityId] ?? { interested: false, saved: false, discoverable: false };
+    setError("");
+    setBusyId(activityId);
+    setStates((current) => ({ ...current, [activityId]: next }));
+    try {
+      const saved = await saveActivityState(activityId, next, viewer);
+      setStates((current) => ({ ...current, [activityId]: saved }));
+      if (openCompany) router.push(`/activity?id=${activityId}&company=1`);
+    } catch (stateError) {
+      setStates((current) => ({ ...current, [activityId]: previous }));
+      setError(stateError instanceof Error ? stateError.message : "That change couldn’t be saved.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   return (
     <main className={styles.pageBackdrop}>
       <div className={`${styles.mobilePage} ${styles.feedPage}`}>
-        <header className={styles.feedHeader}>
-          <Link href="/" aria-label="Back to Dyad home"><Logo /></Link>
-          <span className={styles.profileBadge}>SL</span>
-        </header>
+        <AppHeader />
         <div className={styles.feedScroll}>
           <h1>Discover</h1>
-          <section className={styles.eventList} aria-label="Nearby activities">
-            {events.map((event) => <EventRow event={event} key={event.title} />)}
-          </section>
+          {error ? <p className={styles.pageError} role="alert">{error}</p> : null}
+          {loading ? (
+            <div className={styles.emptyState}><span className={styles.emptyStateIcon}><RefreshCw size={20} /></span><h2>Finding things to do…</h2></div>
+          ) : activities.length ? (
+            <section className={styles.eventList} aria-label="Nearby activities">
+              {activities.map((activity) => {
+                const state = states[activity.id] ?? { interested: false, saved: false, discoverable: false };
+                return <EventRow activity={activity} state={state} busy={busyId === activity.id} key={activity.id} onChange={(next) => void updateState(activity.id, next)} onFindCompany={() => void updateState(activity.id, { ...state, interested: true, discoverable: true }, true)} />;
+              })}
+            </section>
+          ) : (
+            <section className={styles.emptyState}>
+              <span className={styles.emptyStateIcon}><RefreshCw size={20} /></span>
+              <h2>No activities nearby yet</h2>
+              <p>New official listings will show up here as soon as the catalog refreshes.</p>
+              <button className={styles.emptyStateAction} type="button" onClick={() => void load()}>Check again</button>
+            </section>
+          )}
         </div>
-        <BottomNavigation />
+        <BottomNavigation active="feed" />
       </div>
     </main>
   );

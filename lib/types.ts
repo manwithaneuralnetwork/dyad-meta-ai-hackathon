@@ -75,6 +75,7 @@ export type Activity = {
   description: string;
   imageUrl: string;
   venue: string;
+  address?: string;
   neighborhood: string;
   distanceMiles: number;
   startsAt: string;

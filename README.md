@@ -6,7 +6,7 @@ The app intentionally separates **Interested** (private) from **Find company** (
 
 ## Current status
 
-The approved mobile UI is implemented as a navigable prototype. Golden-path state and service wiring have not begun yet. Earlier API routes, Supabase files, and matching utilities remain in the repository as reference code, but their product assumptions are not authoritative for the redesigned experience.
+The approved mobile UI, two-mode authentication, onboarding, persistent activity catalog, and per-user Interested/Saved/Find-company state are implemented. Demo mode keeps those choices in the current browser session; real accounts persist them in Supabase. Groups and chat are the next implementation checkpoint.
 
 The implementation contract and setup status live in [docs/golden-path-readiness.md](docs/golden-path-readiness.md).
 
@@ -36,11 +36,11 @@ Copy `.env.example` to `.env.local`. The hackathon path requires:
 - `TICKETMASTER_API_KEY`
 - `CRON_SECRET`
 
-The Supabase project URL and publishable key connect persistent real accounts and multi-user data. A server secret is optional and should be added only for reviewed server-only operations. Never expose the Supabase secret key or Meta key through `NEXT_PUBLIC_` variables.
+The Supabase project URL and publishable key connect persistent real accounts and multi-user data. A server secret is required for the protected Ticketmaster catalog-sync endpoint. Never expose the Supabase secret key or Meta key through `NEXT_PUBLIC_` variables.
 
 ### Supabase schema note
 
-The repository contains an earlier migration in `supabase/migrations/` and a local seed in `supabase/seed.sql`. They must be replaced with a fresh schema for the approved two-mode architecture before deployment.
+The repository migrations define the identity and activity schemas applied to the hosted Dyad project. They intentionally contain no seed people, activities, or conversations.
 
 ```bash
 npx supabase start

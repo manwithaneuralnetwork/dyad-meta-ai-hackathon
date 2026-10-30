@@ -1,20 +1,11 @@
-import Link from "next/link";
-import {
-  Bell,
-  CalendarDays,
-  ChevronRight,
-  Compass,
-  MapPin,
-  MessageCircle,
-  Pencil,
-  Tags,
-  UserRound,
-} from "lucide-react";
-import styles from "../dyad.module.css";
+"use client";
 
-function Logo() {
-  return <span className={styles.logo}><span className={styles.logoMark}><span /></span><span>dyad</span></span>;
-}
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Bell, ChevronRight, MapPin, Pencil, Tags } from "lucide-react";
+import styles from "../dyad.module.css";
+import { AppHeader, BottomNavigation } from "../app-navigation";
+import { getViewerProfile, resolveViewer, type PublicProfile, type Viewer } from "@/lib/activity-data";
 
 const accountSettings = [
   { label: "Edit profile", detail: "Photo, bio, and one-liner", href: "/settings/profile", Icon: Pencil },
@@ -23,52 +14,30 @@ const accountSettings = [
   { label: "Notifications", detail: "Invites, chats, and activity updates", href: "/settings/notifications", Icon: Bell },
 ] as const;
 
-type Setting = (typeof accountSettings)[number];
-
-function SettingsSection({ title, items }: { title: string; items: readonly Setting[] }) {
-  return (
-    <section className={styles.youSettingsSection}>
-      <h2>{title}</h2>
-      <div className={styles.youSettingsList}>
-        {items.map(({ label, detail, href, Icon }) => (
-          <Link className={styles.youSettingRow} href={href} key={label}>
-            <span className={styles.youSettingIcon}><Icon size={19} /></span>
-            <span className={styles.youSettingCopy}><strong>{label}</strong><span>{detail}</span></span>
-            <ChevronRight size={18} aria-hidden="true" />
-          </Link>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 export default function YouPage() {
+  const [viewer, setViewer] = useState<Viewer>({ kind: "anonymous" });
+  const [profile, setProfile] = useState<PublicProfile | null>(null);
+  useEffect(() => { void (async () => { const next = await resolveViewer(); setViewer(next); setProfile(await getViewerProfile(next)); })(); }, []);
+
+  const name = viewer.kind === "demo" ? "Demo profile" : profile?.display_name || "Complete your profile";
+  const profileHref = viewer.kind === "real" ? `/profile?person=${viewer.userId}` : "/settings/profile";
   return (
     <main className={styles.pageBackdrop}>
       <div className={`${styles.mobilePage} ${styles.feedPage}`}>
-        <header className={styles.feedHeader}>
-          <Link href="/" aria-label="Back to Dyad home"><Logo /></Link>
-          <span className={styles.profileBadge}>SL</span>
-        </header>
-
+        <AppHeader />
         <div className={`${styles.feedScroll} ${styles.youScroll}`}>
           <h1>Profile</h1>
-
-          <Link className={styles.youProfileCard} href="/profile?person=sam">
+          <Link className={styles.youProfileCard} href={profileHref}>
             <span className={styles.youAvatar} aria-hidden="true" />
-            <span className={styles.youProfileCopy}><strong>Sam Lee</strong><span>View your public profile</span></span>
+            <span className={styles.youProfileCopy}><strong>{name}</strong><span>{viewer.kind === "real" ? "View your public profile" : "Set up this session’s profile"}</span></span>
             <ChevronRight size={20} aria-hidden="true" />
           </Link>
-
-          <SettingsSection title="Settings" items={accountSettings} />
+          <section className={styles.youSettingsSection}>
+            <h2>Settings</h2>
+            <div className={styles.youSettingsList}>{accountSettings.map(({ label, detail, href, Icon }) => <Link className={styles.youSettingRow} href={href} key={label}><span className={styles.youSettingIcon}><Icon size={19} /></span><span className={styles.youSettingCopy}><strong>{label}</strong><span>{detail}</span></span><ChevronRight size={18} aria-hidden="true" /></Link>)}</div>
+          </section>
         </div>
-
-        <nav className={styles.bottomNav} aria-label="Primary navigation">
-          <Link className={styles.navItem} href="/feed"><Compass size={20} /><span>Discovery</span></Link>
-          <Link className={styles.navItem} href="/activities"><CalendarDays size={20} /><span>My Activities</span></Link>
-          <Link className={styles.navItem} href="/chats"><MessageCircle size={20} /><span>Chats</span></Link>
-          <Link className={`${styles.navItem} ${styles.navActive}`} href="/you"><UserRound size={20} /><span>You</span></Link>
-        </nav>
+        <BottomNavigation active="you" />
       </div>
     </main>
   );

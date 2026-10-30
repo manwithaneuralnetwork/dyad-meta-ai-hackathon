@@ -451,6 +451,34 @@
 .navActive { color: var(--dyad-ink); }
 .navActive svg { color: var(--dyad-aqua-deep); }
 
+.eventArtworkImage, .myActivityArt img, .activityHeroWithImage > img { width: 100%; height: 100%; object-fit: cover; }
+.eventArtworkImage { position: relative; z-index: 2; display: block; }
+.myActivityArt img { position: relative; z-index: 2; display: block; }
+.actionSelected { border-color: var(--dyad-aqua-deep); background: color-mix(in srgb, var(--dyad-aqua) 18%, white); }
+.saveSelected { color: var(--dyad-aqua-deep); }
+.pageError { margin: 0 0 18px; color: #a63b36; font-size: 12px; line-height: 1.45; }
+.emptyState { display: flex; min-height: 330px; align-items: center; justify-content: center; flex-direction: column; padding: 42px 24px; text-align: center; }
+.emptyStateIcon { display: grid; place-items: center; width: 48px; height: 48px; margin-bottom: 17px; border-radius: 50%; background: color-mix(in srgb, var(--dyad-aqua) 18%, white); color: var(--dyad-aqua-deep); }
+.emptyState h1, .emptyState h2 { margin: 0; font-size: 24px; letter-spacing: -1px; }
+.emptyState p { max-width: 310px; margin: 11px 0 20px; color: var(--dyad-muted); font-size: 12px; line-height: 1.55; }
+.emptyState > a, .sectionEmptyState > a { display: inline-flex; align-items: center; gap: 6px; padding: 11px 15px; border-radius: 999px; background: var(--dyad-ink); color: white; font-size: 11px; font-weight: 780; }
+.sectionEmptyState { padding: 17px 20px 20px; border-top: 1px solid var(--dyad-border); background: color-mix(in srgb, var(--dyad-surface) 55%, white); }
+.sectionEmptyState p { margin: 0 0 11px; color: var(--dyad-muted); font-size: 10px; line-height: 1.45; }
+.sectionEmptyState > a { padding: 8px 11px; font-size: 9px; }
+.simplePageHeader { display: grid; min-height: 72px; grid-template-columns: 44px 1fr 44px; align-items: center; padding: 13px 18px; border-bottom: 1px solid var(--dyad-border); }
+.simplePageHeader strong { justify-self: center; font-size: 13px; }
+.peopleEmpty { padding: 25px 12px; text-align: center; }
+.peopleEmpty p { margin: 0 0 8px; color: var(--dyad-muted); font-size: 11px; line-height: 1.5; }
+.createGroupButton:disabled { opacity: .38; }
+.activityHeroWithImage::before, .activityHeroWithImage::after { display: none; }
+.activityHeroWithImage > img { position: absolute; inset: 0; }
+.hostCard a { color: inherit; }
+.profileStatsSingle { grid-template-columns: 1fr; }
+.profileStatsSingle div + div { border-left: 0; }
+.profileArt { background-position: center; background-size: cover; }
+.profileActions button:disabled { cursor: not-allowed; opacity: .42; }
+.mutedEmptyText { color: var(--dyad-muted); font-size: 12px; }
+
 @media (max-width: 360px) {
   .hero { padding-top: 43px; }
   .hero h1 { font-size: 42px; letter-spacing: -3px; }

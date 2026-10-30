@@ -1,6 +1,81 @@
 export type Database = {
   public: {
     Tables: {
+      activities: {
+        Row: {
+          address: string;
+          city: string;
+          created_at: string;
+          description: string;
+          ends_at: string | null;
+          external_id: string | null;
+          id: string;
+          image_url: string | null;
+          price_label: string;
+          source_name: string;
+          source_type: string;
+          source_url: string | null;
+          starts_at: string;
+          status: string;
+          title: string;
+          topics: string[];
+          updated_at: string;
+          venue_name: string;
+        };
+        Insert: {
+          address?: string;
+          city?: string;
+          created_at?: string;
+          description?: string;
+          ends_at?: string | null;
+          external_id?: string | null;
+          id?: string;
+          image_url?: string | null;
+          price_label?: string;
+          source_name: string;
+          source_type: string;
+          source_url?: string | null;
+          starts_at: string;
+          status?: string;
+          title: string;
+          topics?: string[];
+          updated_at?: string;
+          venue_name?: string;
+        };
+        Update: {
+          address?: string;
+          city?: string;
+          created_at?: string;
+          description?: string;
+          ends_at?: string | null;
+          external_id?: string | null;
+          id?: string;
+          image_url?: string | null;
+          price_label?: string;
+          source_name?: string;
+          source_type?: string;
+          source_url?: string | null;
+          starts_at?: string;
+          status?: string;
+          title?: string;
+          topics?: string[];
+          updated_at?: string;
+          venue_name?: string;
+        };
+        Relationships: [];
+      };
+      activity_discovery: {
+        Row: { activity_id: string; created_at: string; user_id: string };
+        Insert: { activity_id: string; created_at?: string; user_id: string };
+        Update: { activity_id?: string; created_at?: string; user_id?: string };
+        Relationships: [];
+      };
+      activity_states: {
+        Row: { activity_id: string; interested: boolean; saved: boolean; updated_at: string; user_id: string };
+        Insert: { activity_id: string; interested?: boolean; saved?: boolean; updated_at?: string; user_id: string };
+        Update: { activity_id?: string; interested?: boolean; saved?: boolean; updated_at?: string; user_id?: string };
+        Relationships: [];
+      };
       profile_interests: {
         Row: { created_at: string; interest: string; user_id: string };
         Insert: { created_at?: string; interest: string; user_id: string };
@@ -91,6 +166,15 @@ export type Database = {
       };
       replace_my_interests: {
         Args: { p_interests: string[] };
+        Returns: undefined;
+      };
+      set_my_activity_state: {
+        Args: {
+          p_activity_id: string;
+          p_discoverable: boolean;
+          p_interested: boolean;
+          p_saved: boolean;
+        };
         Returns: undefined;
       };
     };

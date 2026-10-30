@@ -1,6 +1,6 @@
 # Dyad golden-path readiness
 
-Status: **Checkpoint 1 complete: identity and onboarding foundation implemented.**
+Status: **Checkpoint 2 complete: identity, onboarding, Discovery, and activity state implemented.**
 
 This document is the implementation contract for the hackathon build. It replaces the behavior assumptions in the earlier implementation while preserving the approved mobile UI.
 
@@ -22,19 +22,18 @@ This document is the implementation contract for the hackathon build. It replace
 Dyad has two deliberately separated modes:
 
 - **Real mode:** email/password users authenticate with Supabase. Profiles, interests, activity states, discoverability, invitations, groups, connections, and messages persist in Postgres. Group messages update through Supabase Realtime.
-- **Demo mode:** a seeded identity and all changes stay in `sessionStorage`. Demo users never write to Supabase, never appear to real users, and cannot message real accounts.
+- **Demo mode:** an isolated session identity and all changes stay in `sessionStorage`. Demo users never write to Supabase, never appear to real users, and cannot message real accounts.
 
 The modes share UI and domain types but use different repositories behind one interface. This prevents demo records from contaminating the real social graph while preserving a reliable judge path.
 
 Shared supporting data:
 
-- Seeded local demo data: profiles, attendance counts, activity images, group history, and initial chat messages.
-- Ticketmaster: refresh or augment official activity data server-side; fall back to the checked-in activity catalog.
+- Ticketmaster: refresh official activity data server-side. Empty states remain honest when the catalog has no rows.
 - Meta Model API: generate one visible, useful result; fall back to a deterministic local result with the same response shape.
 
 ### Real social proof for judging
 
-Before the demo, create a small set of genuine accounts for the user and willing helpers. Each person should complete a profile, mark the same controlled activity as discoverable, and join one test group. This lets judges see live people and Realtime chat without requiring strangers or fabricating activity. Seeded demo people remain available only in demo mode.
+Before the demo, create a small set of genuine accounts for the user and willing helpers. Each person should complete a profile, mark the same controlled activity as discoverable, and join one test group. This lets judges see live people and Realtime chat without requiring strangers or fabricating activity. Demo mode never invents people or conversations.
 
 ### Supabase scope
 
@@ -79,7 +78,7 @@ Every transition needs a loading state, success feedback, and a recoverable erro
 | --- | --- | --- |
 | Meta Model API | Visible AI output | Key configured and live request verified |
 | Ticketmaster Discovery API | Official San Diego event source | Key configured and live request verified |
-| Supabase | Persistent real accounts, user data, and Realtime chat | Identity schema deployed; social/activity schema comes in later checkpoints |
+| Supabase | Persistent real accounts, user data, and Realtime chat | Identity and activity-state schemas deployed; groups/chat come next |
 | Google OAuth | Not required for judge path | Do not configure yet |
 | Scheduled sync | Optional pre-demo refresh | Cron secret configured; hosting scheduler undecided |
 
@@ -104,13 +103,13 @@ The Google OAuth control has been replaced with a prominent `Continue as demo` b
 ## Implementation checkpoints
 
 1. **Identity and onboarding — complete.** Real email/password accounts use Supabase Auth. Profiles, interests, and private locations persist behind RLS. Demo onboarding uses `sessionStorage` only.
-2. **Discovery and activity state.** Replace feed fixtures with a shared activity catalog, then persist Interested, Saved, and Find company state for real users while retaining a deterministic demo repository.
+2. **Discovery and activity state — complete.** Feed fixtures are removed. Supabase stores the shared catalog plus real-user Interested, Saved, and Find company state; demo choices remain session-only.
 3. **Groups and live chat.** Persist invitations, group membership, and messages; enforce membership with RLS; subscribe to messages with Realtime.
 4. **Judge hardening and deploy.** Connect the visible Meta moment, exercise fallbacks, deploy, run the production smoke suite, and rehearse the three-minute path.
 
 ## Failure strategy
 
-- Ticketmaster failure: use checked-in official-looking seed activities and show no error in the primary demo path.
+- Ticketmaster failure: retain the last successful catalog; if none exists, show a clear empty state with retry affordance.
 - Meta failure or timeout: return a deterministic brief/explanation with the same UI and mark it as a fallback only in developer diagnostics.
 - Geolocation denial: keep the typed-address option visible and offer the seeded San Diego demo location.
 - Refresh/reopen: session state survives reloads in the same tab session but disappears when the session ends.

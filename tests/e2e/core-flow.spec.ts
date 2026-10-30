@@ -16,7 +16,14 @@ test("demo onboarding reaches Discovery without creating an account", async ({ p
 
   await expect(page).toHaveURL(/\/feed$/);
   await expect(page.getByRole("heading", { name: "Discover" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No activities nearby yet" })).toBeVisible();
   await expect.poll(() => page.evaluate(() => sessionStorage.getItem("dyad-app-mode"))).toBe("demo");
+
+  await page.getByRole("link", { name: "My Activities" }).click();
+  await expect(page.getByRole("heading", { name: "Your groups" })).toBeVisible();
+  await expect(page.getByText("You haven’t marked any upcoming activities as interested.")).toBeVisible();
+  await expect(page.getByText("Save an activity to keep it handy without making yourself visible.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Go to Discovery" }).first()).toHaveAttribute("href", "/feed");
 });
 
 test("real account forms collect email and password", async ({ page }) => {
