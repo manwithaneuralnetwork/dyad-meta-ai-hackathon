@@ -78,7 +78,7 @@ export default function SignUpPage() {
           <h1>Join Dyad</h1>
           <p className={styles.authLead}>Set up the basics. We’ll get to what you’re into next.</p>
 
-          <form className={styles.authForm} onSubmit={handleSubmit}>
+          <form className={styles.authForm} method="post" onSubmit={handleSubmit}>
             <label>
               <span>Email</span>
               <input type="email" name="email" autoComplete="email" placeholder="you@example.com" required value={email} onChange={(event) => setEmail(event.target.value)} />

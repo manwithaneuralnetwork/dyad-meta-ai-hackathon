@@ -69,7 +69,7 @@ export default function LoginPage() {
           <p className={styles.eyebrow}>Welcome back</p>
           <h1>Log in to Dyad</h1>
 
-          <form className={styles.authForm} onSubmit={handleSubmit}>
+          <form className={styles.authForm} method="post" onSubmit={handleSubmit}>
             <label>
               <span>Email</span>
               <input type="email" name="email" autoComplete="email" placeholder="you@example.com" required value={email} onChange={(event) => setEmail(event.target.value)} />

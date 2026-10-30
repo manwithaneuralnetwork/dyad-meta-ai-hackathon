@@ -24,6 +24,19 @@ test("real account forms collect email and password", async ({ page }) => {
   await expect(page.getByRole("textbox", { name: "Email" })).toBeVisible();
   await expect(page.getByLabel("Password")).toHaveAttribute("minlength", "8");
 
+  await page.route("**/auth/v1/signup", async (route) => {
+    await route.fulfill({
+      status: 400,
+      contentType: "application/json",
+      body: JSON.stringify({ message: "Test signup rejected safely" }),
+    });
+  });
+  await page.getByRole("textbox", { name: "Email" }).fill("browser-test@example.com");
+  await page.getByLabel("Password").fill("safe-test-password");
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await expect(page).toHaveURL(/\/signup$/);
+  await expect(page.getByText("Test signup rejected safely", { exact: true })).toBeVisible();
+
   await page.getByRole("link", { name: "Log in" }).click();
   await expect(page).toHaveURL(/\/login$/);
   await expect(page.getByRole("button", { name: /Log in/ })).toBeVisible();
