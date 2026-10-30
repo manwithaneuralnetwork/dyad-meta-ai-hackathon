@@ -8,7 +8,7 @@ import styles from "../dyad.module.css";
 import ChatHeader from "./chat-header";
 import InvitePeopleSheet from "./invite-people-sheet";
 import { activityLocation, resolveViewer, type Viewer } from "@/lib/activity-data";
-import { getGroupDetail, leaveGroup, respondToInvite, scrapGroup, sendGroupMessage, subscribeToGroupMessages, unsubscribeFromGroup, type GroupDetail, type GroupMessage } from "@/lib/group-data";
+import { getGroupDetail, leaveGroup, markGroupRead, respondToInvite, scrapGroup, sendGroupMessage, subscribeToGroupMessages, subscribeToGroupPresence, unsubscribeFromGroup, type GroupDetail, type GroupMessage } from "@/lib/group-data";
 
 type TimelineItem =
   | { id: string; kind: "notice"; at: string; text: string }
@@ -26,18 +26,23 @@ export default function GroupClient({ groupId }: { groupId: string }) {
   const [notice, setNotice] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (quiet = false) => {
     if (!groupId) { setLoading(false); return; }
-    setLoading(true);
+    if (!quiet) setLoading(true);
     setError("");
     try {
       const nextViewer = await resolveViewer();
+      const nextDetail = await getGroupDetail(groupId, nextViewer);
       setViewer(nextViewer);
-      setDetail(await getGroupDetail(groupId, nextViewer));
+      setDetail(nextDetail);
+      if (nextDetail?.accepted) {
+        await markGroupRead(groupId, nextViewer);
+        window.dispatchEvent(new Event("dyad:notifications-changed"));
+      }
     } catch {
       setError("This conversation couldn’t be loaded.");
     } finally {
-      setLoading(false);
+      if (!quiet) setLoading(false);
     }
   }, [groupId]);
 
@@ -47,9 +52,16 @@ export default function GroupClient({ groupId }: { groupId: string }) {
     if (!detail?.accepted) return;
     const channel = subscribeToGroupMessages(groupId, (message) => {
       setDetail((current) => current ? { ...current, messages: current.messages.some((item) => item.id === message.id) ? current.messages : [...current.messages, message] } : current);
+      void markGroupRead(groupId, viewer).then(() => window.dispatchEvent(new Event("dyad:notifications-changed")));
     });
     return () => unsubscribeFromGroup(channel);
-  }, [detail?.accepted, groupId]);
+  }, [detail?.accepted, groupId, viewer]);
+
+  useEffect(() => {
+    if (!detail) return;
+    const channel = subscribeToGroupPresence(groupId, () => void load(true));
+    return () => unsubscribeFromGroup(channel);
+  }, [detail?.groupId, groupId, load]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -70,7 +82,7 @@ export default function GroupClient({ groupId }: { groupId: string }) {
     setError("");
     try {
       await respondToInvite(groupId, response);
-      if (response === "declined") router.replace("/chats");
+      if (response === "declined") router.replace("/inbox");
       else await load();
     } catch (responseError) {
       setError(responseError instanceof Error ? responseError.message : "That invitation couldn’t be updated.");

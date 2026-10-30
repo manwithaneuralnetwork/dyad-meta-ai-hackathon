@@ -86,9 +86,9 @@ export type Database = {
         Relationships: [];
       };
       group_members: {
-        Row: { group_id: string; user_id: string; role: string; joined_at: string };
-        Insert: { group_id: string; user_id: string; role?: string; joined_at?: string };
-        Update: { group_id?: string; user_id?: string; role?: string; joined_at?: string };
+        Row: { group_id: string; user_id: string; role: string; joined_at: string; last_read_at: string };
+        Insert: { group_id: string; user_id: string; role?: string; joined_at?: string; last_read_at?: string };
+        Update: { group_id?: string; user_id?: string; role?: string; joined_at?: string; last_read_at?: string };
         Relationships: [];
       };
       group_invites: {
@@ -101,6 +101,12 @@ export type Database = {
         Row: { id: string; group_id: string; sender_id: string; body: string; created_at: string };
         Insert: { id?: string; group_id: string; sender_id: string; body: string; created_at?: string };
         Update: { id?: string; group_id?: string; sender_id?: string; body?: string; created_at?: string };
+        Relationships: [];
+      };
+      notification_reads: {
+        Row: { user_id: string; notification_key: string; read_at: string };
+        Insert: { user_id: string; notification_key: string; read_at?: string };
+        Update: { user_id?: string; notification_key?: string; read_at?: string };
         Relationships: [];
       };
       interest_tags: {

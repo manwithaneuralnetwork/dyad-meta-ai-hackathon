@@ -7,7 +7,7 @@ import { CORE_INTEREST_TAGS } from "@/lib/interest-tags";
 
 export type ActivityRecord = Database["public"]["Tables"]["activities"]["Row"];
 export type PublicProfile = Database["public"]["Tables"]["profiles"]["Row"];
-export type ActivityUiState = { interested: boolean; saved: boolean; discoverable: boolean };
+export type ActivityUiState = { interested: boolean; saved: boolean; discoverable: boolean; groupId?: string };
 export type Viewer = { kind: "real"; userId: string } | { kind: "demo" } | { kind: "anonymous" };
 export type InterestTag = { label: string; isCore: boolean };
 
@@ -115,20 +115,31 @@ export async function loadActivityStates(activityIds: string[], viewer: Viewer):
 
   const supabase = createSupabaseBrowserClient();
   if (!supabase) return states;
-  const [stateResult, discoveryResult] = await Promise.all([
+  const [stateResult, discoveryResult, membershipResult] = await Promise.all([
     supabase.from("activity_states").select("activity_id, interested, saved").eq("user_id", viewer.userId).in("activity_id", activityIds),
     supabase.from("activity_discovery").select("activity_id").eq("user_id", viewer.userId).in("activity_id", activityIds),
+    supabase.from("group_members").select("group_id").eq("user_id", viewer.userId),
   ]);
   if (stateResult.error) throw stateResult.error;
   if (discoveryResult.error) throw discoveryResult.error;
+  if (membershipResult.error) throw membershipResult.error;
+
+  const groupIds = membershipResult.data.map((row) => row.group_id);
+  const { data: groups, error: groupsError } = groupIds.length
+    ? await supabase.from("groups").select("id, activity_id").in("id", groupIds).in("activity_id", activityIds)
+    : { data: [], error: null };
+  if (groupsError) throw groupsError;
 
   for (const row of stateResult.data) states[row.activity_id] = { interested: row.interested, saved: row.saved, discoverable: false };
   for (const row of discoveryResult.data) states[row.activity_id] = { ...(states[row.activity_id] ?? EMPTY_STATE), discoverable: true };
+  for (const group of groups) states[group.activity_id] = { ...(states[group.activity_id] ?? EMPTY_STATE), interested: false, discoverable: false, groupId: group.id };
   return states;
 }
 
 export async function saveActivityState(activityId: string, next: ActivityUiState, viewer: Viewer) {
-  const normalized = next.interested ? next : { ...next, discoverable: false };
+  const normalized = next.groupId
+    ? { ...next, interested: false, discoverable: false }
+    : next.interested ? next : { ...next, discoverable: false };
   if (viewer.kind === "anonymous") throw new Error("Choose real or demo mode before saving activities.");
 
   if (viewer.kind === "demo") {

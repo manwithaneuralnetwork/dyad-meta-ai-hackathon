@@ -9,11 +9,11 @@ export type GroupMessage = Database["public"]["Tables"]["messages"]["Row"];
 export type GroupSummary = {
   groupId: string;
   activity: ActivityRecord;
-  status: "member" | "pending";
+  status: "member";
   memberCount: number;
   lastMessage: string;
   lastActivityAt: string;
-  inviterName?: string;
+  unreadCount: number;
 };
 
 export type GroupDetail = {
@@ -54,58 +54,58 @@ export async function listMyGroups(viewer: Viewer): Promise<GroupSummary[]> {
   const supabase = createSupabaseBrowserClient();
   if (!supabase) return [];
 
-  const [membersResult, invitesResult] = await Promise.all([
-    supabase.from("group_members").select("group_id").eq("user_id", viewer.userId),
-    supabase.from("group_invites").select("group_id, inviter_id").eq("invitee_id", viewer.userId).eq("status", "pending"),
-  ]);
+  const membersResult = await supabase.from("group_members").select("group_id, last_read_at").eq("user_id", viewer.userId);
   if (membersResult.error) throw membersResult.error;
-  if (invitesResult.error) throw invitesResult.error;
-
-  const memberIds = new Set(membersResult.data.map((row) => row.group_id));
-  const pendingById = new Map(invitesResult.data.map((row) => [row.group_id, row.inviter_id]));
-  const groupIds = [...new Set([...memberIds, ...pendingById.keys()])];
+  const groupIds = membersResult.data.map((row) => row.group_id);
   if (!groupIds.length) return [];
+
+  const readAtByGroup = new Map(membersResult.data.map((row) => [row.group_id, row.last_read_at]));
 
   const { data: groups, error: groupsError } = await supabase.from("groups").select("*").in("id", groupIds).order("last_message_at", { ascending: false });
   if (groupsError) throw groupsError;
   const activityIds = [...new Set(groups.map((group) => group.activity_id))];
-  const inviterIds = [...new Set(pendingById.values())];
-  const [activitiesResult, memberRowsResult, messagesResult, invitersResult] = await Promise.all([
+  const [activitiesResult, memberRowsResult, messagesResult] = await Promise.all([
     supabase.from("activities").select("*").in("id", activityIds),
     supabase.from("group_members").select("group_id").in("group_id", groupIds),
-    memberIds.size ? supabase.from("messages").select("group_id, body, created_at").in("group_id", [...memberIds]).order("created_at", { ascending: false }) : Promise.resolve({ data: [], error: null }),
-    inviterIds.length ? supabase.from("profiles").select("id, display_name").in("id", inviterIds) : Promise.resolve({ data: [], error: null }),
+    supabase.from("messages").select("group_id, body, created_at, sender_id").in("group_id", groupIds).order("created_at", { ascending: false }),
   ]);
   if (activitiesResult.error) throw activitiesResult.error;
   if (memberRowsResult.error) throw memberRowsResult.error;
   if (messagesResult.error) throw messagesResult.error;
-  if (invitersResult.error) throw invitersResult.error;
+  const senderIds = [...new Set(messagesResult.data.map((message) => message.sender_id))];
+  const { data: senders, error: sendersError } = senderIds.length
+    ? await supabase.from("profiles").select("id, display_name").in("id", senderIds)
+    : { data: [], error: null };
+  if (sendersError) throw sendersError;
 
   const activityById = new Map(activitiesResult.data.map((activity) => [activity.id, activity]));
   const memberCount = new Map<string, number>();
   for (const row of memberRowsResult.data) memberCount.set(row.group_id, (memberCount.get(row.group_id) ?? 0) + 1);
-  const latestMessage = new Map<string, { body: string; created_at: string }>();
+  const latestMessage = new Map<string, { body: string; created_at: string; sender_id: string }>();
   for (const message of messagesResult.data) if (!latestMessage.has(message.group_id)) latestMessage.set(message.group_id, message);
-  const inviterById = new Map(invitersResult.data.map((profile) => [profile.id, profile.display_name]));
+  const senderById = new Map(senders.map((profile) => [profile.id, profile.display_name]));
+  const unreadByGroup = new Map<string, number>();
+  for (const message of messagesResult.data) {
+    if (message.sender_id === viewer.userId) continue;
+    const readAt = readAtByGroup.get(message.group_id);
+    if (readAt && +new Date(message.created_at) <= +new Date(readAt)) continue;
+    unreadByGroup.set(message.group_id, (unreadByGroup.get(message.group_id) ?? 0) + 1);
+  }
 
   return groups.flatMap((group) => {
     const activity = activityById.get(group.activity_id);
     if (!activity) return [];
     const message = latestMessage.get(group.id);
-    const pendingInviter = pendingById.get(group.id);
     return [{
       groupId: group.id,
       activity,
-      status: memberIds.has(group.id) ? "member" as const : "pending" as const,
+      status: "member" as const,
       memberCount: memberCount.get(group.id) ?? 0,
-      lastMessage: pendingInviter ? `${inviterById.get(pendingInviter) || "Someone"} invited you` : message?.body || "Group created — say hello!",
+      lastMessage: message ? `${message.sender_id === viewer.userId ? "You" : senderById.get(message.sender_id) || "Member"}: ${message.body}` : "Group created — say hello!",
       lastActivityAt: message?.created_at || group.last_message_at,
-      inviterName: pendingInviter ? inviterById.get(pendingInviter) || "Someone" : undefined,
+      unreadCount: unreadByGroup.get(group.id) ?? 0,
     }];
-  }).sort((left, right) => {
-    if (left.status !== right.status) return left.status === "pending" ? -1 : 1;
-    return +new Date(right.lastActivityAt) - +new Date(left.lastActivityAt);
-  });
+  }).sort((left, right) => +new Date(right.lastActivityAt) - +new Date(left.lastActivityAt));
 }
 
 export async function listInboxNotifications(viewer: Viewer): Promise<InboxNotification[]> {
@@ -131,16 +131,19 @@ export async function listInboxNotifications(viewer: Viewer): Promise<InboxNotif
   if (groupsError) throw groupsError;
   const activityIds = [...new Set(groups.map((group) => group.activity_id))];
   const profileIds = [...new Set(relevantInvites.map((invite) => invite.invitee_id === viewer.userId ? invite.inviter_id : invite.invitee_id))];
-  const [activitiesResult, profilesResult] = await Promise.all([
+  const [activitiesResult, profilesResult, readsResult] = await Promise.all([
     supabase.from("activities").select("*").in("id", activityIds),
     supabase.from("profiles").select("id, display_name").in("id", profileIds),
+    supabase.from("notification_reads").select("notification_key").eq("user_id", viewer.userId),
   ]);
   if (activitiesResult.error) throw activitiesResult.error;
   if (profilesResult.error) throw profilesResult.error;
+  if (readsResult.error) throw readsResult.error;
 
   const groupById = new Map(groups.map((group) => [group.id, group]));
   const activityById = new Map(activitiesResult.data.map((activity) => [activity.id, activity]));
   const nameById = new Map(profilesResult.data.map((profile) => [profile.id, profile.display_name]));
+  const readKeys = new Set(readsResult.data.map((row) => row.notification_key));
 
   return relevantInvites.flatMap((invite) => {
     const group = groupById.get(invite.group_id);
@@ -159,9 +162,43 @@ export async function listInboxNotifications(viewer: Viewer): Promise<InboxNotif
       body: incoming
         ? `${personName} invited you to ${activity.title}.`
         : `${personName} ${invite.status} your invitation to ${activity.title}.`,
-      unread: incoming || Boolean(invite.responded_at),
+      unread: !readKeys.has(notificationKey(incoming ? "group_invite" : "invite_response", invite.id)),
     }];
   }).sort((left, right) => +new Date(right.createdAt) - +new Date(left.createdAt));
+}
+
+function notificationKey(kind: InboxNotification["kind"], id: string) {
+  return `${kind}:${id}`;
+}
+
+export async function markInboxNotificationsRead(viewer: Viewer, notifications: InboxNotification[]) {
+  if (viewer.kind !== "real" || !notifications.length) return;
+  const supabase = createSupabaseBrowserClient();
+  if (!supabase) return;
+  const rows = notifications.map((notification) => ({
+    user_id: viewer.userId,
+    notification_key: notificationKey(notification.kind, notification.id),
+    read_at: new Date().toISOString(),
+  }));
+  const { error } = await supabase.from("notification_reads").upsert(rows, { onConflict: "user_id,notification_key" });
+  if (error) throw error;
+}
+
+export async function markGroupRead(groupId: string, viewer: Viewer) {
+  if (viewer.kind !== "real") return;
+  const supabase = createSupabaseBrowserClient();
+  if (!supabase) return;
+  const { error } = await supabase.from("group_members").update({ last_read_at: new Date().toISOString() }).eq("group_id", groupId).eq("user_id", viewer.userId);
+  if (error) throw error;
+}
+
+export async function getNotificationCounts(viewer: Viewer) {
+  if (viewer.kind !== "real") return { chats: 0, inbox: 0 };
+  const [groups, notifications] = await Promise.all([listMyGroups(viewer), listInboxNotifications(viewer)]);
+  return {
+    chats: groups.reduce((total, group) => total + group.unreadCount, 0),
+    inbox: notifications.filter((notification) => notification.unread).length,
+  };
 }
 
 export async function getGroupDetail(groupId: string, viewer: Viewer): Promise<GroupDetail | null> {
@@ -265,6 +302,27 @@ export function subscribeToGroupMessages(groupId: string, onMessage: (message: G
   return supabase
     .channel(`group-messages:${groupId}`)
     .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `group_id=eq.${groupId}` }, (payload) => onMessage(payload.new as GroupMessage))
+    .subscribe();
+}
+
+export function subscribeToGroupPresence(groupId: string, onChange: () => void): RealtimeChannel | null {
+  const supabase = createSupabaseBrowserClient();
+  if (!supabase) return null;
+  return supabase
+    .channel(`group-presence:${groupId}`)
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "group_members", filter: `group_id=eq.${groupId}` }, onChange)
+    .on("postgres_changes", { event: "DELETE", schema: "public", table: "group_members", filter: `group_id=eq.${groupId}` }, onChange)
+    .on("postgres_changes", { event: "*", schema: "public", table: "group_invites", filter: `group_id=eq.${groupId}` }, onChange)
+    .subscribe();
+}
+
+export function subscribeToNotificationChanges(onChange: () => void): RealtimeChannel | null {
+  const supabase = createSupabaseBrowserClient();
+  if (!supabase) return null;
+  return supabase
+    .channel(`dyad-notification-counts:${crypto.randomUUID()}`)
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, onChange)
+    .on("postgres_changes", { event: "*", schema: "public", table: "group_invites" }, onChange)
     .subscribe();
 }
 

@@ -6,7 +6,7 @@ import { Compass, MessageCircle } from "lucide-react";
 import styles from "../dyad.module.css";
 import { AppHeader, BottomNavigation } from "../app-navigation";
 import { resolveViewer } from "@/lib/activity-data";
-import { listMyGroups, type GroupSummary } from "@/lib/group-data";
+import { listMyGroups, subscribeToNotificationChanges, unsubscribeFromGroup, type GroupSummary } from "@/lib/group-data";
 
 export default function ChatsPage() {
   const [tab, setTab] = useState<"all" | "activities">("all");
@@ -14,15 +14,19 @@ export default function ChatsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (quiet = false) => {
+    if (!quiet) setLoading(true);
     setError("");
     try { setGroups(await listMyGroups(await resolveViewer())); }
     catch { setError("Your conversations couldn’t be loaded."); }
-    finally { setLoading(false); }
+    finally { if (!quiet) setLoading(false); }
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const channel = subscribeToNotificationChanges(() => void load(true));
+    return () => unsubscribeFromGroup(channel);
+  }, [load]);
 
   return (
     <main className={styles.pageBackdrop}>
@@ -39,8 +43,8 @@ export default function ChatsPage() {
             <section className={styles.chatList} aria-label="Conversations">
               {groups.map((group) => <Link className={styles.chatListRow} href={`/group?id=${group.groupId}`} key={group.groupId}>
                 <span className={`${styles.chatListAvatar} ${styles.chatListActivity}`}>{group.activity.image_url ? <img src={group.activity.image_url} alt="" /> : null}</span>
-                <span className={styles.chatListCopy}><strong>{group.activity.title}</strong><span>{group.status === "pending" ? "Invitation · " : ""}{group.lastMessage}</span></span>
-                <span className={styles.chatListMeta}><time>{relativeTime(group.lastActivityAt)}</time>{group.status === "pending" ? <span>New</span> : null}</span>
+                <span className={styles.chatListCopy}><strong>{group.activity.title}</strong><span>{group.lastMessage}</span></span>
+                <span className={styles.chatListMeta}><time>{relativeTime(group.lastActivityAt)}</time>{group.unreadCount ? <span className={styles.chatUnreadDot} aria-label={`${group.unreadCount} unread ${group.unreadCount === 1 ? "message" : "messages"}`} /> : null}</span>
               </Link>)}
             </section>
           ) : (

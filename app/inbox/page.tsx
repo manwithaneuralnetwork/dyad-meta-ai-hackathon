@@ -6,22 +6,35 @@ import { Bell, Check, Compass, MailOpen, X } from "lucide-react";
 import styles from "../dyad.module.css";
 import { AppHeader, BottomNavigation } from "../app-navigation";
 import { resolveViewer } from "@/lib/activity-data";
-import { listInboxNotifications, type InboxNotification } from "@/lib/group-data";
+import { listInboxNotifications, markInboxNotificationsRead, subscribeToNotificationChanges, unsubscribeFromGroup, type InboxNotification } from "@/lib/group-data";
 
 export default function InboxPage() {
   const [notifications, setNotifications] = useState<InboxNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (quiet = false) => {
+    if (!quiet) setLoading(true);
     setError("");
-    try { setNotifications(await listInboxNotifications(await resolveViewer())); }
+    try {
+      const viewer = await resolveViewer();
+      const next = await listInboxNotifications(viewer);
+      setNotifications(next);
+      if (next.some((notification) => notification.unread)) {
+        await markInboxNotificationsRead(viewer, next.filter((notification) => notification.unread));
+        setNotifications((current) => current.map((notification) => ({ ...notification, unread: false })));
+        window.dispatchEvent(new Event("dyad:notifications-changed"));
+      }
+    }
     catch { setError("Your inbox couldn’t be loaded."); }
-    finally { setLoading(false); }
+    finally { if (!quiet) setLoading(false); }
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const channel = subscribeToNotificationChanges(() => void load(true));
+    return () => unsubscribeFromGroup(channel);
+  }, [load]);
 
   return (
     <main className={styles.pageBackdrop}>

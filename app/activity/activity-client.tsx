@@ -109,10 +109,15 @@ export default function ActivityClient({ activityId, openCompanyInitially }: { a
           {activity.topics.length ? <div className={styles.tagList} aria-label="Activity topics">{activity.topics.map((topic) => <span className={styles.tag} key={topic}>{topic}</span>)}</div> : null}
 
           <div className={`${styles.activityActions} ${state.interested ? styles.activityActionsWithNotice : ""}`}>
-            <button className={`${styles.activityAction} ${state.interested ? styles.actionSelected : ""}`} type="button" disabled={busy} onClick={() => void toggleInterested()}><Heart size={16} fill={state.interested ? "currentColor" : "none"} />Interested</button>
-            <FindCompanySheet activity={activity} viewer={viewer} initiallyOpen={openCompanyInitially} onActivate={() => persist({ ...state, interested: true, discoverable: true })} />
+            {state.groupId ? <>
+              <button className={styles.activityAction} type="button" disabled><Heart size={16} />In group</button>
+              <Link className={`${styles.activityAction} ${styles.activityActionDark}`} href={`/group?id=${state.groupId}`}><UsersRound size={16} />Open group</Link>
+            </> : <>
+              <button className={`${styles.activityAction} ${state.interested ? styles.actionSelected : ""}`} type="button" disabled={busy} onClick={() => void toggleInterested()}><Heart size={16} fill={state.interested ? "currentColor" : "none"} />Interested</button>
+              <FindCompanySheet activity={activity} viewer={viewer} initiallyOpen={openCompanyInitially} onActivate={() => persist({ ...state, interested: true, discoverable: true })} />
+            </>}
           </div>
-          {state.interested ? <p className={styles.interestNotice} role="status">You’re open to invitations from other Interested people.</p> : null}
+          {state.groupId ? <p className={styles.interestNotice} role="status">You’re already in this activity’s group.</p> : state.interested ? <p className={styles.interestNotice} role="status">You’re open to invitations from other Interested people.</p> : null}
           {error ? <p className={styles.pageError} role="alert">{error}</p> : null}
 
           <dl className={styles.activityFacts}>{facts.map(({ label, value, Icon }) => <div className={styles.activityFact} key={label}><span className={styles.factIcon}><Icon size={17} aria-hidden="true" /></span><div><dt>{label}</dt><dd>{value}</dd></div></div>)}</dl>

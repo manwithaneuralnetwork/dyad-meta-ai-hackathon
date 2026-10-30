@@ -213,12 +213,13 @@
 .scrapGroupCard button:disabled { opacity: .5; }
 .messageRow { display: grid; grid-template-columns: 32px minmax(0,1fr); gap: 8px; align-items: end; margin-top: 15px; }
 .messageRowOwn { display: flex; justify-content: flex-end; margin-top: 15px; }
+.messageRowOwn > div { display: flex; width: fit-content; max-width: 82%; min-width: 0; align-items: flex-end; flex-direction: column; }
 .chatAvatar { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--dyad-ink); color: white; font-size: 9px; font-weight: 820; transform: translateY(-13px); }
 .chatAvatarAqua { background: var(--dyad-aqua); color: var(--dyad-ink); }
 .messageStack { min-width: 0; }
 .messageName { display: block; margin: 0 0 5px 3px; color: var(--dyad-muted); font-size: 9px; font-weight: 760; }
-.messageBubble { width: fit-content; max-width: 84%; margin: 0; padding: 11px 13px; border-radius: 16px 16px 16px 4px; background: white; box-shadow: 0 1px 0 rgba(17,21,20,.05); font-size: 13px; line-height: 1.42; }
-.messageBubbleOwn { max-width: 82%; border-radius: 16px 16px 4px 16px; background: var(--dyad-aqua); }
+.messageBubble { width: fit-content; max-width: 84%; margin: 0; padding: 11px 13px; overflow-wrap: anywhere; white-space: pre-wrap; border-radius: 16px 16px 16px 4px; background: white; box-shadow: 0 1px 0 rgba(17,21,20,.05); font-size: 13px; line-height: 1.42; }
+.messageBubbleOwn { width: auto; max-width: 100%; border-radius: 16px 16px 4px 16px; background: var(--dyad-aqua); }
 .messageTime { display: block; margin: 5px 3px 0; color: #9ba29f; font-size: 8px; }
 .messageTimeOwn { text-align: right; }
 .composer { display: grid; grid-template-columns: minmax(0,1fr) 42px; gap: 8px; flex: 0 0 auto; padding: 11px 13px calc(11px + env(safe-area-inset-bottom)); border-top: 1px solid var(--dyad-border); background: white; }
@@ -363,6 +364,7 @@
 .chatListMeta { align-self: center; display: flex; min-width: 48px; align-items: flex-end; flex-direction: column; gap: 8px; }
 .chatListMeta time { color: #9aa19e; font-size: 8px; }
 .chatListMeta > span { display: grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: var(--dyad-aqua); color: var(--dyad-ink); font-size: 8px; font-weight: 850; }
+.chatListMeta > .chatUnreadDot { width: 8px; min-width: 8px; height: 8px; padding: 0; background: var(--dyad-aqua-deep); box-shadow: 0 0 0 3px color-mix(in srgb, var(--dyad-aqua) 20%, white); }
 .inboxScroll { padding-bottom: 24px; }
 .inboxScroll > h1 { margin-bottom: 7px; }
 .inboxIntro { margin: 0 0 20px; color: var(--dyad-muted); font-size: 11px; }
@@ -491,6 +493,8 @@
 @keyframes sheetRise { from { transform: translateY(100%); } to { transform: translateY(0); } }
 .bottomNav { flex: 0 0 auto; display: grid; grid-template-columns: repeat(4,1fr); padding: 10px 8px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid var(--dyad-border); background: rgba(255,255,255,.97); }
 .navItem { display: flex; min-width: 0; height: 49px; align-items: center; justify-content: center; flex-direction: column; gap: 4px; padding: 0; border: 0; background: transparent; color: #8b9290; font-size: 9px; font-weight: 680; cursor: default; }
+.navIconWrap { position: relative; display: grid; place-items: center; }
+.navBadge { position: absolute; top: -7px; right: -10px; display: grid; place-items: center; min-width: 16px; height: 16px; padding: 0 4px; border: 2px solid white; border-radius: 999px; background: var(--dyad-aqua-deep); color: white; font-size: 7px; font-weight: 850; line-height: 1; }
 .navActive { color: var(--dyad-ink); }
 .navActive svg { color: var(--dyad-aqua-deep); }
 

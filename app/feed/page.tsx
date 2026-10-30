@@ -49,8 +49,13 @@ function EventRow({
         <h2><Link href={href}>{activity.title}</Link></h2>
         <p className={styles.eventAddress}><MapPin size={13} aria-hidden="true" />{activityLocation(activity) || activity.city}</p>
         <div className={styles.eventActions}>
-          <button className={`${styles.actionPill} ${state.interested ? styles.actionSelected : ""}`} type="button" disabled={busy} onClick={() => { const interested = !state.interested; onChange({ ...state, interested, discoverable: interested }); }}><Heart size={12} fill={state.interested ? "currentColor" : "none"} aria-hidden="true" />Interested</button>
-          <button className={styles.actionPill} type="button" disabled={busy} onClick={onFindCompany}><UsersRound size={12} aria-hidden="true" />Find company</button>
+          {state.groupId ? <>
+            <button className={styles.actionPill} type="button" disabled><Heart size={12} aria-hidden="true" />In group</button>
+            <Link className={styles.actionPill} href={`/group?id=${state.groupId}`}><UsersRound size={12} aria-hidden="true" />Open group</Link>
+          </> : <>
+            <button className={`${styles.actionPill} ${state.interested ? styles.actionSelected : ""}`} type="button" disabled={busy} onClick={() => { const interested = !state.interested; onChange({ ...state, interested, discoverable: interested }); }}><Heart size={12} fill={state.interested ? "currentColor" : "none"} aria-hidden="true" />Interested</button>
+            <button className={styles.actionPill} type="button" disabled={busy} onClick={onFindCompany}><UsersRound size={12} aria-hidden="true" />Find company</button>
+          </>}
         </div>
         <button className={`${styles.iconButton} ${styles.saveButton} ${state.saved ? styles.saveSelected : ""}`} type="button" disabled={busy} aria-label={`${state.saved ? "Unsave" : "Save"} ${activity.title}`} onClick={() => onChange({ ...state, saved: !state.saved })}><Bookmark size={15} fill={state.saved ? "currentColor" : "none"} /></button>
       </div>
