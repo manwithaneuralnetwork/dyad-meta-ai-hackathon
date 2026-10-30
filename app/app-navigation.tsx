@@ -9,7 +9,7 @@ export function Logo() {
 export function AppHeader() {
   return (
     <header className={styles.feedHeader}>
-      <Link href="/" aria-label="Back to Dyad home"><Logo /></Link>
+      <Logo />
       <Link className={styles.profileBadge} href="/you" aria-label="Open your profile"><UserRound size={17} /></Link>
     </header>
   );

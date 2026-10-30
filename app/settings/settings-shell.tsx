@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import Link from "next/link";
 import SmartBackButton from "../smart-back-button";
 import styles from "../dyad.module.css";
 
@@ -15,7 +14,7 @@ export default function SettingsShell({ children, eyebrow, title }: { children: 
       <section className={`${styles.mobilePage} ${styles.settingsPage}`}>
         <header className={styles.settingsHeader}>
           <SmartBackButton className={styles.plainBackButton} fallbackHref="/you" />
-          <Link href="/" aria-label="Dyad home"><Logo /></Link>
+          <Logo />
           <span />
         </header>
         <div className={styles.settingsBody}>

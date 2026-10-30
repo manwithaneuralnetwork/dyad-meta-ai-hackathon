@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Plus, X } from "lucide-react";
 import styles from "../../dyad.module.css";
@@ -87,7 +86,7 @@ export default function InterestsPage() {
       <section className={`${styles.mobilePage} ${styles.onboardingPage}`}>
         <header className={styles.onboardingHeader}>
           <SmartBackButton className={styles.plainBackButton} fallbackHref="/signup" label="Back to account setup" />
-          <Link href="/" aria-label="Dyad home"><Logo /></Link>
+          <Logo />
           <span className={styles.onboardingStep}>1 of 2</span>
         </header>
         <div className={styles.onboardingProgress} aria-label="Onboarding progress: step 1 of 2"><span /></div>
