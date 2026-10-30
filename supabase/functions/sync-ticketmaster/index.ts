@@ -54,8 +54,9 @@ Deno.serve(async (request) => {
       for (const tag of newTags.values()) canonicalByLower.set(tag.toLowerCase(), tag);
     }
 
-    const rows = enriched.map(({ activity, tags }) => ({
+    const rows = enriched.map(({ activity, tags, displayTitle }) => ({
       ...activity,
+      title: displayTitle,
       topics: tags.map((tag) => canonicalByLower.get(tag.toLowerCase()) ?? tag),
     }));
     if (rows.length) {
@@ -123,7 +124,7 @@ function normalizeEvent(event: any) {
 async function enrichActivities(activities: ReturnType<typeof normalizeEvent>[]) {
   const batches = [];
   for (let index = 0; index < activities.length; index += 25) batches.push(activities.slice(index, index + 25));
-  const results: Array<{ activity: ReturnType<typeof normalizeEvent>; tags: string[]; usedAi: boolean }> = [];
+  const results: Array<{ activity: ReturnType<typeof normalizeEvent>; tags: string[]; displayTitle: string; usedAi: boolean }> = [];
   for (let index = 0; index < batches.length; index += 2) {
     const pair = await Promise.all(batches.slice(index, index + 2).map(enrichBatch));
     results.push(...pair.flat());
@@ -132,7 +133,15 @@ async function enrichActivities(activities: ReturnType<typeof normalizeEvent>[])
 }
 
 async function enrichBatch(batch: ReturnType<typeof normalizeEvent>[]) {
-  const fallback = () => batch.map((activity) => ({ activity, tags: heuristicTags(activity), usedAi: false }));
+  const fallback = () => batch.map((activity) => {
+    const tags = heuristicTags(activity);
+    return {
+      activity,
+      tags,
+      displayTitle: informativeTitle(activity.title, tags),
+      usedAi: false,
+    };
+  });
   if (!MODEL_API_KEY) return fallback();
   try {
     const response = await fetch("https://api.meta.ai/v1/chat/completions", {
@@ -141,7 +150,7 @@ async function enrichBatch(batch: ReturnType<typeof normalizeEvent>[]) {
       body: JSON.stringify({
         model: META_MODEL,
         messages: [
-          { role: "developer", content: "Assign 1 to 6 interest tags to every public activity. Prefer the supplied catalog. Create a concise neutral activity-topic tag only if the catalog is insufficient. Never create demographic, identity, health, political, religious, or sensitive-trait tags. Return every externalId exactly once and do not invent facts." },
+          { role: "developer", content: "For every public activity, create an informative display title and assign 1 to 6 interest tags. A display title must be concise, preserve the event or performer identity, and make the activity type clear when the source title is vague (for example, 'Knox' becomes 'Knox Concert'). Keep an already-informative source title when changing it would not help. Do not add dates, venues, genres, or other facts unless they are supported by the supplied activity. Prefer the supplied tag catalog. Create a concise neutral activity-topic tag only if the catalog is insufficient. Never create demographic, identity, health, political, religious, or sensitive-trait tags. Return every externalId exactly once and do not invent facts." },
           { role: "user", content: JSON.stringify({ catalogTags: CORE_TAGS, activities: batch.map((item) => ({ externalId: item.external_id, title: item.title, description: item.description, venue: item.venue_name })) }) },
         ],
         response_format: { type: "json_schema", json_schema: { name: "dyad_activity_tags", strict: true, schema: tagsSchema() } },
@@ -152,12 +161,17 @@ async function enrichBatch(batch: ReturnType<typeof normalizeEvent>[]) {
     const payload = await response.json();
     const parsed = JSON.parse(payload.choices?.[0]?.message?.content ?? "{}");
     if (!Array.isArray(parsed.activities)) return fallback();
-    const tagsById = new Map(parsed.activities.map((item: any) => [item.externalId, item.tags]));
-    return batch.map((activity) => ({
-      activity,
-      tags: normalizeTags(tagsById.get(activity.external_id), activity),
-      usedAi: true,
-    }));
+    const analysisById = new Map(parsed.activities.map((item: any) => [item.externalId, item]));
+    return batch.map((activity) => {
+      const analysis = analysisById.get(activity.external_id);
+      const tags = normalizeTags(analysis?.tags, activity);
+      return {
+        activity,
+        tags,
+        displayTitle: normalizeDisplayTitle(analysis?.displayTitle, activity.title, tags),
+        usedAi: true,
+      };
+    });
   } catch {
     return fallback();
   }
@@ -168,10 +182,38 @@ function tagsSchema() {
     type: "object", additionalProperties: false,
     properties: { activities: { type: "array", items: {
       type: "object", additionalProperties: false,
-      properties: { externalId: { type: "string" }, tags: { type: "array", minItems: 1, maxItems: 6, items: { type: "string" } } },
-      required: ["externalId", "tags"],
+      properties: {
+        externalId: { type: "string" },
+        displayTitle: { type: "string", minLength: 2, maxLength: 120 },
+        tags: { type: "array", minItems: 1, maxItems: 6, items: { type: "string" } },
+      },
+      required: ["externalId", "displayTitle", "tags"],
     } } }, required: ["activities"],
   };
+}
+
+function normalizeDisplayTitle(value: unknown, sourceTitle: string, tags: string[]) {
+  if (typeof value !== "string") return informativeTitle(sourceTitle, tags);
+  const title = value.replace(/\s+/g, " ").trim().replace(/^[\"'“”]+|[\"'“”]+$/g, "");
+  if (title.length < 2 || title.length > 120) return informativeTitle(sourceTitle, tags);
+  return informativeTitle(title, tags);
+}
+
+function informativeTitle(title: string, tags: string[]) {
+  const clean = title.replace(/\s+/g, " ").trim();
+  const words = clean.split(/\s+/).filter(Boolean);
+  if (words.length > 3 || /\b(concert|show|performance|game|match|festival|workshop|class|tour|exhibit(?:ion)?|screening|movie|film|market|fair|meetup|conference|party|night|experience|event)\b/i.test(clean)) return clean;
+  const suffix = tags.includes("Live music") ? "Concert"
+    : tags.includes("Comedy") ? "Comedy Show"
+    : tags.includes("Theatre") ? "Theatre Performance"
+    : tags.includes("Casual sports") ? "Game"
+    : tags.includes("Dancing") ? "Dance Event"
+    : tags.includes("Festivals") ? "Festival"
+    : tags.includes("Art & galleries") ? "Exhibition"
+    : tags.includes("Fitness") ? "Fitness Event"
+    : "";
+  if (!suffix || clean.toLowerCase().endsWith(suffix.toLowerCase())) return clean;
+  return `${clean} ${suffix}`;
 }
 
 function normalizeTags(values: unknown, activity: ReturnType<typeof normalizeEvent>) {
