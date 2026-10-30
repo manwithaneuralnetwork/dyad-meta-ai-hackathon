@@ -82,11 +82,11 @@ export default function LocationPage() {
     <main className={styles.pageBackdrop}>
       <section className={`${styles.mobilePage} ${styles.onboardingPage}`}>
         <header className={styles.onboardingHeader}>
-          <SmartBackButton className={styles.plainBackButton} fallbackHref="/onboarding/interests" label="Back to interests" />
+          <SmartBackButton className={styles.plainBackButton} fallbackHref="/onboarding/profile" label="Back to profile details" />
           <Logo />
-          <span className={styles.onboardingStep}>2 of 2</span>
+          <span className={styles.onboardingStep}>3 of 3</span>
         </header>
-        <div className={`${styles.onboardingProgress} ${styles.onboardingProgressComplete}`} aria-label="Onboarding progress: step 2 of 2"><span /></div>
+        <div className={`${styles.onboardingProgress} ${styles.onboardingProgressComplete}`} aria-label="Onboarding progress: step 3 of 3"><span /></div>
 
         <div className={`${styles.onboardingBody} ${styles.locationBody}`}>
           <p className={styles.eyebrow}>Keep it nearby</p>

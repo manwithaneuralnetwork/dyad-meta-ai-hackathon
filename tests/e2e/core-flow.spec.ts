@@ -5,10 +5,21 @@ test("demo onboarding reaches Discovery without creating an account", async ({ p
   await page.getByRole("link", { name: "Continue as demo" }).click();
   await expect(page.getByRole("heading", { name: "What are you into?" })).toBeVisible();
 
-  for (const interest of ["Live music", "Coffee", "City walks", "Museums", "Trying new food"]) {
+  await expect(page.getByRole("button", { name: "Theatre", exact: true })).toHaveCount(0);
+  await page.getByRole("searchbox", { name: "Search interests" }).fill("Technology");
+  await expect(page.getByRole("button", { name: "Technology", exact: true })).toBeVisible();
+  await page.getByRole("searchbox", { name: "Search interests" }).fill("");
+  await page.getByRole("button", { name: "Live music", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Theatre", exact: true })).toBeVisible();
+
+  for (const interest of ["Coffee", "City walks", "Museums", "Trying new food"]) {
     await page.getByRole("button", { name: interest }).click();
   }
 
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "What should people call you?" })).toBeVisible();
+  await page.getByRole("textbox", { name: "Preferred name" }).fill("Demo Sam");
+  await page.getByRole("spinbutton", { name: "Age" }).fill("28");
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Where should we look?" })).toBeVisible();
   await page.getByRole("textbox", { name: "Enter your street address" }).fill("123 Main St, San Diego, CA");
@@ -16,7 +27,14 @@ test("demo onboarding reaches Discovery without creating an account", async ({ p
 
   await expect(page).toHaveURL(/\/feed$/);
   await expect(page.getByRole("heading", { name: "Discover" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "All", exact: true })).toBeVisible();
+  const liveMusicFilter = page.getByRole("button", { name: "Live music", exact: true });
+  await liveMusicFilter.click();
+  await expect(liveMusicFilter).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("region", { name: "Nearby activities" }).locator("article").first()).toBeVisible();
+  await page.getByRole("button", { name: "All", exact: true }).click();
   await expect.poll(() => page.evaluate(() => sessionStorage.getItem("dyad-app-mode"))).toBe("demo");
+  await expect.poll(() => page.evaluate(() => JSON.parse(sessionStorage.getItem("dyad-profile") ?? "{}").age)).toBe(28);
 
   const firstActivity = page.getByRole("region", { name: "Nearby activities" }).locator("article").first();
   const firstTitle = await firstActivity.getByRole("heading").innerText();

@@ -6,6 +6,7 @@ export type Database = {
           address: string;
           city: string;
           created_at: string;
+          dedupe_key: string;
           description: string;
           ends_at: string | null;
           external_id: string | null;
@@ -26,6 +27,7 @@ export type Database = {
           address?: string;
           city?: string;
           created_at?: string;
+          dedupe_key: string;
           description?: string;
           ends_at?: string | null;
           external_id?: string | null;
@@ -46,6 +48,7 @@ export type Database = {
           address?: string;
           city?: string;
           created_at?: string;
+          dedupe_key?: string;
           description?: string;
           ends_at?: string | null;
           external_id?: string | null;
@@ -76,6 +79,12 @@ export type Database = {
         Update: { activity_id?: string; interested?: boolean; saved?: boolean; updated_at?: string; user_id?: string };
         Relationships: [];
       };
+      interest_tags: {
+        Row: { active: boolean; created_at: string; is_core: boolean; label: string; source: string };
+        Insert: { active?: boolean; created_at?: string; is_core?: boolean; label: string; source?: string };
+        Update: { active?: boolean; created_at?: string; is_core?: boolean; label?: string; source?: string };
+        Relationships: [];
+      };
       profile_interests: {
         Row: { created_at: string; interest: string; user_id: string };
         Insert: { created_at?: string; interest: string; user_id: string };
@@ -84,6 +93,7 @@ export type Database = {
       };
       profiles: {
         Row: {
+          age: number | null;
           attended_count: number;
           avatar_url: string | null;
           bio: string;
@@ -96,6 +106,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          age?: number | null;
           attended_count?: number;
           avatar_url?: string | null;
           bio?: string;
@@ -108,6 +119,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          age?: number | null;
           attended_count?: number;
           avatar_url?: string | null;
           bio?: string;
@@ -175,6 +187,10 @@ export type Database = {
           p_interested: boolean;
           p_saved: boolean;
         };
+        Returns: undefined;
+      };
+      set_my_profile_details: {
+        Args: { p_age: number; p_display_name: string };
         Returns: undefined;
       };
     };

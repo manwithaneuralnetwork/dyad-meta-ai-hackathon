@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Bookmark, Heart, MapPin, RefreshCw, UsersRound } from "lucide-react";
@@ -11,6 +11,7 @@ import {
   activityLocation,
   formatActivityDate,
   listActivities,
+  loadViewerInterests,
   loadActivityStates,
   resolveViewer,
   saveActivityState,
@@ -62,6 +63,8 @@ export default function FeedPage() {
   const [activities, setActivities] = useState<ActivityRecord[]>([]);
   const [states, setStates] = useState<Record<string, ActivityUiState>>({});
   const [viewer, setViewer] = useState<Viewer>({ kind: "anonymous" });
+  const [filterTags, setFilterTags] = useState<string[]>([]);
+  const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -71,10 +74,14 @@ export default function FeedPage() {
     setError("");
     try {
       const [nextActivities, nextViewer] = await Promise.all([listActivities(), resolveViewer()]);
-      const nextStates = await loadActivityStates(nextActivities.map((activity) => activity.id), nextViewer);
+      const [nextStates, nextInterests] = await Promise.all([
+        loadActivityStates(nextActivities.map((activity) => activity.id), nextViewer),
+        loadViewerInterests(nextViewer),
+      ]);
       setActivities(nextActivities);
       setViewer(nextViewer);
       setStates(nextStates);
+      setFilterTags(nextInterests);
     } catch {
       setError("Discovery couldn’t load right now. Please try again.");
     } finally {
@@ -83,6 +90,16 @@ export default function FeedPage() {
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+
+  const filteredActivities = useMemo(() => {
+    if (!selectedFilters.length) return activities;
+    const selected = new Set(selectedFilters.map((tag) => tag.toLowerCase()));
+    return activities.filter((activity) => activity.topics.some((topic) => selected.has(topic.toLowerCase())));
+  }, [activities, selectedFilters]);
+
+  function toggleFilter(tag: string) {
+    setSelectedFilters((current) => current.includes(tag) ? current.filter((item) => item !== tag) : [...current, tag]);
+  }
 
   async function updateState(activityId: string, next: ActivityUiState, openCompany = false) {
     const previous = states[activityId] ?? { interested: false, saved: false, discoverable: false };
@@ -107,15 +124,28 @@ export default function FeedPage() {
         <AppHeader />
         <div className={styles.feedScroll}>
           <h1>Discover</h1>
+          {!loading && filterTags.length ? (
+            <div className={styles.discoveryFilters} aria-label="Filter activities by your interests">
+              <button className={!selectedFilters.length ? styles.discoveryFilterActive : ""} type="button" onClick={() => setSelectedFilters([])}>All</button>
+              {filterTags.map((tag) => <button className={selectedFilters.includes(tag) ? styles.discoveryFilterActive : ""} key={tag} type="button" aria-pressed={selectedFilters.includes(tag)} onClick={() => toggleFilter(tag)}>{tag}</button>)}
+            </div>
+          ) : null}
           {error ? <p className={styles.pageError} role="alert">{error}</p> : null}
           {loading ? (
             <div className={styles.emptyState}><span className={styles.emptyStateIcon}><RefreshCw size={20} /></span><h2>Finding things to do…</h2></div>
-          ) : activities.length ? (
+          ) : filteredActivities.length ? (
             <section className={styles.eventList} aria-label="Nearby activities">
-              {activities.map((activity) => {
+              {filteredActivities.map((activity) => {
                 const state = states[activity.id] ?? { interested: false, saved: false, discoverable: false };
                 return <EventRow activity={activity} state={state} busy={busyId === activity.id} key={activity.id} onChange={(next) => void updateState(activity.id, next)} onFindCompany={() => void updateState(activity.id, { ...state, interested: true, discoverable: true }, true)} />;
               })}
+            </section>
+          ) : activities.length && selectedFilters.length ? (
+            <section className={styles.emptyState}>
+              <span className={styles.emptyStateIcon}><RefreshCw size={20} /></span>
+              <h2>No matches for those interests</h2>
+              <p>Try another tag or return to everything happening nearby.</p>
+              <button className={styles.emptyStateAction} type="button" onClick={() => setSelectedFilters([])}>Show all activities</button>
             </section>
           ) : (
             <section className={styles.emptyState}>

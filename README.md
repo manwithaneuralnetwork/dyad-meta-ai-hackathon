@@ -6,7 +6,7 @@ The app intentionally separates **Interested** (private) from **Find company** (
 
 ## Current status
 
-The approved mobile UI, two-mode authentication, onboarding, persistent activity catalog, and per-user Interested/Saved/Find-company state are implemented. Demo mode keeps those choices in the current browser session; real accounts persist them in Supabase. Groups and chat are the next implementation checkpoint.
+The approved mobile UI, two-mode authentication, three-step onboarding, persistent activity catalog, AI-assisted interest tags, duplicate rejection, Discovery filters, and per-user Interested/Saved/Find-company state are implemented. Demo mode keeps those choices in the current browser session; real accounts persist them in Supabase. Groups and chat are the next implementation checkpoint.
 
 The implementation contract and setup status live in [docs/golden-path-readiness.md](docs/golden-path-readiness.md).
 
@@ -53,7 +53,7 @@ For a hosted project, link the repository, push the migration, deploy the functi
 ```bash
 npx supabase link --project-ref YOUR_PROJECT_REF
 npx supabase db push
-npx supabase secrets set TICKETMASTER_API_KEY=... MODEL_API_KEY=... META_MODEL=muse-spark-1.3
+npx supabase secrets set TICKETMASTER_API_KEY=... MODEL_API_KEY=... META_MODEL=muse-spark-1.3 CRON_SECRET=...
 npx supabase functions deploy sync-ticketmaster --no-verify-jwt
 ```
 
@@ -63,27 +63,26 @@ Then adapt and run `supabase/cron.sql.example` in the SQL editor. It stores the 
 
 Muse Spark runs at two high-leverage points rather than on every feed view:
 
-1. Onboarding: explicit answers become a shared `InterestProfile` taxonomy.
-2. Event ingestion: new or changed Ticketmaster events become `EventSemanticProfile` records in batches of 20.
+1. Event ingestion: Ticketmaster activities are assigned one to six interest tags in batches, using the shared 30-tag catalog whenever possible.
+2. Taxonomy growth: the model may add a short, neutral activity tag only when the core catalog cannot describe the event accurately.
 
-Feed ranking is deterministic and inspectable. Source dates, venues, prices, and URLs always come from Ticketmaster. The model cannot publish activities, send invitations, or enroll users. Private chat is never sent to the model.
+Event identity is deterministic: normalized title, UTC minute, and city form a database-enforced duplicate key. Source dates, venues, prices, and URLs always come from Ticketmaster. The model cannot publish activities, send invitations, or enroll users. Private chat is never sent to the model.
 
 If Meta is unavailable, onboarding and event ingestion use deterministic fallbacks. If Ticketmaster is unavailable, the last successful catalog remains active.
 
 ## Architecture
 
 ```text
-Ticketmaster ──► scheduled Edge Function ──► activities
-                         │
-                         └──► Muse Spark batch enrichment ──► event_semantic_profiles
+Ticketmaster ──► duplicate key check ──► Muse Spark tag enrichment
+                                              │
+                                              ├──► activities.topics
+                                              └──► dynamic interest_tags
 
-Onboarding ──► Muse Spark / deterministic fallback ──► interest_profiles
-                                                             │
-activities + semantic profiles + interest profile ──► deterministic feed
-                                                             │
-                                           Interested / Find company
-                                                             │
-                                      groups ─► chat ─► reconnect votes
+Onboarding ──► profile + interests + location ──► Discovery tag filters
+                                                        │
+                                      Interested / Find company
+                                                        │
+                                 groups ─► chat ─► reconnect votes
 ```
 
 ## Demo walkthrough

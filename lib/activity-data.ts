@@ -3,11 +3,13 @@
 import type { Database } from "@/lib/database.types";
 import { getAppMode, startRealSession } from "@/lib/app-session";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { CORE_INTEREST_TAGS } from "@/lib/interest-tags";
 
 export type ActivityRecord = Database["public"]["Tables"]["activities"]["Row"];
 export type PublicProfile = Database["public"]["Tables"]["profiles"]["Row"];
 export type ActivityUiState = { interested: boolean; saved: boolean; discoverable: boolean };
 export type Viewer = { kind: "real"; userId: string } | { kind: "demo" } | { kind: "anonymous" };
+export type InterestTag = { label: string; isCore: boolean };
 
 const DEMO_ACTIVITY_STATE_KEY = "dyad-activity-states";
 const EMPTY_STATE: ActivityUiState = { interested: false, saved: false, discoverable: false };
@@ -52,6 +54,45 @@ export async function listActivities(options?: { includePast?: boolean }): Promi
   const { data, error } = await query;
   if (error) throw error;
   return data;
+}
+
+export async function listInterestTags(): Promise<InterestTag[]> {
+  const supabase = createSupabaseBrowserClient();
+  if (!supabase) return CORE_INTEREST_TAGS.map((label) => ({ label, isCore: true }));
+  const { data, error } = await supabase
+    .from("interest_tags")
+    .select("label, is_core")
+    .eq("active", true);
+  if (error) return CORE_INTEREST_TAGS.map((label) => ({ label, isCore: true }));
+  const tagByLabel = new Map(data.map((tag) => [tag.label, tag]));
+  const core = CORE_INTEREST_TAGS
+    .filter((label) => tagByLabel.has(label))
+    .map((label) => ({ label, isCore: true }));
+  const dynamic = data
+    .filter((tag) => !tag.is_core)
+    .sort((left, right) => left.label.localeCompare(right.label))
+    .map((tag) => ({ label: tag.label, isCore: false }));
+  return [...core, ...dynamic];
+}
+
+export async function loadViewerInterests(viewer: Viewer): Promise<string[]> {
+  if (viewer.kind === "demo") {
+    try {
+      return JSON.parse(window.sessionStorage.getItem("dyad-interests") ?? "[]") as string[];
+    } catch {
+      return [];
+    }
+  }
+  if (viewer.kind !== "real") return [];
+  const supabase = createSupabaseBrowserClient();
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("profile_interests")
+    .select("interest")
+    .eq("user_id", viewer.userId)
+    .order("created_at");
+  if (error) throw error;
+  return data.map((item) => item.interest);
 }
 
 export async function getActivity(activityId: string): Promise<ActivityRecord | null> {
