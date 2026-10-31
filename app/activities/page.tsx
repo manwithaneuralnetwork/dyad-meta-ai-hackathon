@@ -7,6 +7,7 @@ import styles from "../dyad.module.css";
 import { AppHeader, BottomNavigation } from "../app-navigation";
 import {
   activityLocation,
+  activityHasEnded,
   formatActivityDate,
   listActivities,
   loadActivityStates,
@@ -76,12 +77,18 @@ export default function MyActivitiesPage() {
       const state = states[activity.id];
       return state && (state.interested || state.saved) && matches(activity);
     });
+    const matchingGroups = groups.filter((group) => matches(group.activity));
+    const activeGroups = matchingGroups.filter((group) => !activityHasEnded(group.activity, now));
+    const pastById = new Map<string, ActivityRecord>();
+    for (const activity of tracked) if (activityHasEnded(activity, now)) pastById.set(activity.id, activity);
+    for (const group of matchingGroups) if (activityHasEnded(group.activity, now)) pastById.set(group.activity.id, group.activity);
     return {
-      interested: tracked.filter((activity) => new Date(activity.starts_at).getTime() >= now && states[activity.id]?.interested).sort((a, b) => +new Date(a.starts_at) - +new Date(b.starts_at)),
-      saved: tracked.filter((activity) => new Date(activity.starts_at).getTime() >= now && states[activity.id]?.saved).sort((a, b) => +new Date(a.starts_at) - +new Date(b.starts_at)),
-      past: tracked.filter((activity) => new Date(activity.starts_at).getTime() < now).sort((a, b) => +new Date(b.starts_at) - +new Date(a.starts_at)),
+      groups: activeGroups,
+      interested: tracked.filter((activity) => !activityHasEnded(activity, now) && states[activity.id]?.interested).sort((a, b) => +new Date(a.starts_at) - +new Date(b.starts_at)),
+      saved: tracked.filter((activity) => !activityHasEnded(activity, now) && states[activity.id]?.saved).sort((a, b) => +new Date(a.starts_at) - +new Date(b.starts_at)),
+      past: [...pastById.values()].sort((a, b) => +new Date(b.ends_at || b.starts_at) - +new Date(a.ends_at || a.starts_at)),
     };
-  }, [activities, query, states]);
+  }, [activities, groups, query, states]);
 
   return (
     <main className={styles.pageBackdrop}>
@@ -93,7 +100,7 @@ export default function MyActivitiesPage() {
           {error ? <p className={styles.pageError} role="alert">{error}</p> : null}
           {loading ? <div className={styles.sectionEmptyState}><p>Loading your activities…</p></div> : (
             <>
-              <ActivitySection title="Your groups" items={groups.map((group) => group.activity)} groups={groups} kind="group" emptyText="No activity groups yet. Find company on an activity to start one." />
+              <ActivitySection title="Your groups" items={lists.groups.map((group) => group.activity)} groups={lists.groups} kind="group" emptyText="No upcoming activity groups. Find company on an activity to start one." />
               <ActivitySection title="Interested" items={lists.interested} kind="interested" emptyText={query ? "No interested activities match your search." : "You haven’t marked any upcoming activities as interested."} />
               <ActivitySection title="Saved" items={lists.saved} kind="saved" emptyText={query ? "No saved activities match your search." : "Save an activity to keep it handy without making yourself visible."} />
               <ActivitySection title="Past" items={lists.past} kind="past" emptyText={query ? "No past activities match your search." : "Past activities you tracked will appear here."} />

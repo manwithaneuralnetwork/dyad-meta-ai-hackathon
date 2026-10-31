@@ -214,3 +214,7 @@ export function formatActivityDate(startsAt: string, options?: { long?: boolean 
 export function activityLocation(activity: ActivityRecord) {
   return [activity.venue_name, activity.address, activity.city].filter(Boolean).join(" · ");
 }
+
+export function activityHasEnded(activity: ActivityRecord, now = Date.now()) {
+  return new Date(activity.ends_at || activity.starts_at).getTime() < now;
+}
