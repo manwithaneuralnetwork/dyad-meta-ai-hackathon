@@ -9,6 +9,7 @@
     "start": "next start",
     "check:setup": "node scripts/check-setup.mjs",
     "check": "npm run check:setup && npm run typecheck && npm test",
+    "smoke": "node scripts/smoke.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

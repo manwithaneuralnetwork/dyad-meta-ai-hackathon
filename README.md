@@ -26,6 +26,7 @@ npm run check:setup
 npm run typecheck
 npm test
 npm run build
+npm run smoke -- https://your-deployed-url.example
 ```
 
 ## Connect production services
