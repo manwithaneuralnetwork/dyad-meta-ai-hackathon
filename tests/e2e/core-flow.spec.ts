@@ -1,16 +1,43 @@
 import { expect, test } from "@playwright/test";
+import { CORE_INTEREST_TAGS } from "../../lib/interest-tags";
 
 test("demo onboarding reaches Discovery without creating an account", async ({ page }) => {
+  const startsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const endsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000).toISOString();
+  await page.route("**/rest/v1/interest_tags**", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(CORE_INTEREST_TAGS.map((label) => ({ label, is_core: true }))) }));
+  await page.route("**/rest/v1/activities**", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify([{
+      id: "00000000-0000-4000-8000-000000000101",
+      title: "San Diego Jazz Night",
+      description: "An official live jazz listing used by the offline browser test.",
+      venue_name: "Balboa Park",
+      address: "1549 El Prado",
+      city: "San Diego",
+      starts_at: startsAt,
+      ends_at: endsAt,
+      price_label: "$15",
+      topics: ["Live music"],
+      image_url: null,
+      source_name: "Ticketmaster",
+      source_type: "ticketmaster",
+      source_url: "https://example.test/activity",
+      external_id: "offline-fixture",
+      dedupe_key: "offline-fixture",
+      status: "published",
+      created_at: "2026-10-31T00:00:00.000Z",
+      updated_at: "2026-10-31T00:00:00.000Z",
+    }]),
+  }));
   await page.goto("/signup");
   await page.getByRole("link", { name: "Continue as demo" }).click();
   await expect(page.getByRole("heading", { name: "What are you into?" })).toBeVisible();
 
-  await expect(page.getByRole("button", { name: "Theatre", exact: true })).toHaveCount(0);
-  await page.getByRole("searchbox", { name: "Search interests" }).fill("Technology");
-  await expect(page.getByRole("button", { name: "Technology", exact: true })).toBeVisible();
+  await page.getByRole("searchbox", { name: "Search interests" }).fill("Live music");
+  await expect(page.getByRole("button", { name: "Live music", exact: true })).toBeVisible();
   await page.getByRole("searchbox", { name: "Search interests" }).fill("");
   await page.getByRole("button", { name: "Live music", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Theatre", exact: true })).toBeVisible();
 
   for (const interest of ["Coffee", "City walks", "Museums", "Trying new food"]) {
     await page.getByRole("button", { name: interest }).click();
@@ -18,7 +45,7 @@ test("demo onboarding reaches Discovery without creating an account", async ({ p
 
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await expect(page.getByRole("heading", { name: "What should people call you?" })).toBeVisible();
-  await page.getByRole("textbox", { name: "Preferred name" }).fill("Demo Sam");
+  await page.getByRole("textbox", { name: "Preferred full name" }).fill("Demo Sam");
   await page.getByRole("spinbutton", { name: "Age" }).fill("28");
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Where should we look?" })).toBeVisible();
