@@ -93,9 +93,9 @@ export default function ProfileOnboardingPage() {
         <div className={`${styles.onboardingBody} ${styles.profileOnboardingBody}`}>
           <p className={styles.eyebrow}>A quick introduction</p>
           <h1>What should people call you?</h1>
-          <p className={styles.onboardingLead}>Your preferred name appears on your profile. Your age is saved to your account but won’t be shown in Discovery.</p>
+          <p className={styles.onboardingLead}>Your preferred full name appears on your profile and in chats. Your age is saved to your account but won’t be shown in Discovery.</p>
           <div className={styles.settingsForm}>
-            <label><span>Preferred name</span><input autoComplete="name" maxLength={80} value={name} onChange={(event) => setName(event.target.value)} placeholder="Sam" /></label>
+            <label><span>Preferred full name</span><input autoComplete="name" maxLength={80} value={name} onChange={(event) => setName(event.target.value)} placeholder="Sam Lee" /></label>
             <label><span>Age</span><input inputMode="numeric" min={18} max={120} type="number" value={age} onChange={(event) => setAge(event.target.value)} placeholder="24" /></label>
           </div>
           {error ? <p className={styles.settingsError} role="alert">{error}</p> : null}

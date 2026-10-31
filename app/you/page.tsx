@@ -6,6 +6,7 @@ import { Bell, ChevronRight, Inbox, MapPin, Pencil, Tags } from "lucide-react";
 import styles from "../dyad.module.css";
 import { AppHeader, BottomNavigation } from "../app-navigation";
 import { getViewerProfile, resolveViewer, type PublicProfile, type Viewer } from "@/lib/activity-data";
+import { getNotificationCounts, subscribeToNotificationChanges, unsubscribeFromGroup } from "@/lib/group-data";
 
 const accountSettings = [
   { label: "Inbox", detail: "Invitations and plan updates", href: "/inbox", Icon: Inbox },
@@ -18,7 +19,31 @@ const accountSettings = [
 export default function YouPage() {
   const [viewer, setViewer] = useState<Viewer>({ kind: "anonymous" });
   const [profile, setProfile] = useState<PublicProfile | null>(null);
-  useEffect(() => { void (async () => { const next = await resolveViewer(); setViewer(next); setProfile(await getViewerProfile(next)); })(); }, []);
+  const [inboxCount, setInboxCount] = useState(0);
+  useEffect(() => {
+    let active = true;
+    const refresh = async () => {
+      try {
+        const next = await resolveViewer();
+        const [nextProfile, counts] = await Promise.all([getViewerProfile(next), getNotificationCounts(next)]);
+        if (!active) return;
+        setViewer(next);
+        setProfile(nextProfile);
+        setInboxCount(counts.inbox);
+      } catch {
+        // Keep the profile page usable if notification counts are temporarily unavailable.
+      }
+    };
+    const handleChange = () => { void refresh(); };
+    void refresh();
+    window.addEventListener("dyad:notifications-changed", handleChange);
+    const channel = subscribeToNotificationChanges(handleChange);
+    return () => {
+      active = false;
+      window.removeEventListener("dyad:notifications-changed", handleChange);
+      unsubscribeFromGroup(channel);
+    };
+  }, []);
 
   const name = viewer.kind === "demo" ? "Demo profile" : profile?.display_name || "Complete your profile";
   const profileHref = viewer.kind === "real" ? `/profile?person=${viewer.userId}` : "/settings/profile";
@@ -35,7 +60,7 @@ export default function YouPage() {
           </Link>
           <section className={styles.youSettingsSection}>
             <h2>Settings</h2>
-            <div className={styles.youSettingsList}>{accountSettings.map(({ label, detail, href, Icon }) => <Link className={styles.youSettingRow} href={href} key={label}><span className={styles.youSettingIcon}><Icon size={19} /></span><span className={styles.youSettingCopy}><strong>{label}</strong><span>{detail}</span></span><ChevronRight size={18} aria-hidden="true" /></Link>)}</div>
+            <div className={styles.youSettingsList}>{accountSettings.map(({ label, detail, href, Icon }) => <Link className={styles.youSettingRow} href={href} key={label}><span className={styles.youSettingIcon}><Icon size={19} /></span><span className={styles.youSettingCopy}><strong>{label}</strong><span>{detail}</span></span>{label === "Inbox" && inboxCount > 0 ? <span className={styles.youSettingBadge} aria-label={`${inboxCount} unread notifications`}>{inboxCount > 99 ? "99+" : inboxCount}</span> : null}<ChevronRight size={18} aria-hidden="true" /></Link>)}</div>
           </section>
         </div>
         <BottomNavigation active="you" />

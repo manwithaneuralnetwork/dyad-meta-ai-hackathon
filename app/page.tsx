@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import styles from "./dyad.module.css";
+import LandingActivityShowcase from "./landing-activity-showcase";
 
 const reasons = [
   { number: "01", title: "Always have something to talk about.", body: "The activity keeps conversation moving naturally—before, during, and after." },
@@ -36,20 +37,7 @@ export default function LandingPage() {
           <Link className={styles.aquaPill} href="/signup">Get started <ArrowRight size={17} aria-hidden="true" /></Link>
         </section>
 
-        <section className={styles.activityArtwork} aria-label="Example nearby plans">
-          <div className={styles.artRing} /><div className={styles.artDisc} /><div className={styles.artSquare} />
-          <div className={styles.artworkTopline}><span>Plans nearby</span><span>This weekend</span></div>
-          <div className={styles.planStack}>
-            <div className={styles.planCardLight}>
-              <span className={styles.aquaDot} />
-              <span><strong>Local jazz concert</strong><small>Sat · Balboa Park · $15 · 12 going</small></span>
-            </div>
-            <div className={styles.planCardAqua}>
-              <span className={styles.miniMark}><span /></span>
-              <span><strong>Community wood sculpture workshop</strong><small>Sun · City Heights · Free · 18 going</small></span>
-            </div>
-          </div>
-        </section>
+        <LandingActivityShowcase />
 
         <section className={styles.whySection}>
           <p className={styles.eyebrow}>Why activities work</p>
