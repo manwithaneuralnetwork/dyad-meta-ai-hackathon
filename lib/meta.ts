@@ -7,13 +7,15 @@ export async function callMuseStructured<T>({
   system,
   prompt,
   schema,
-  validator
+  validator,
+  timeoutMs = 25_000,
 }: {
   name: string;
   system: string;
   prompt: string;
   schema: Record<string, unknown>;
   validator: z.ZodType<T>;
+  timeoutMs?: number;
 }): Promise<{ data: T; usage?: Record<string, number>; model: string } | null> {
   const apiKey = process.env.MODEL_API_KEY;
   if (!apiKey) return null;
@@ -33,7 +35,7 @@ export async function callMuseStructured<T>({
         json_schema: { name, strict: true, schema }
       }
     }),
-    signal: AbortSignal.timeout(25_000)
+    signal: AbortSignal.timeout(timeoutMs)
   });
 
   if (!response.ok) throw new Error(`Meta Model API returned ${response.status}`);

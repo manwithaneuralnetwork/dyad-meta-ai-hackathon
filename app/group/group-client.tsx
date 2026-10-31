@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Compass, MessageCircle, Send, Trash2 } from "lucide-react";
+import { Compass, MessageCircle, RefreshCw, Send, Sparkles, Trash2 } from "lucide-react";
 import styles from "../dyad.module.css";
 import ChatHeader from "./chat-header";
 import InvitePeopleSheet from "./invite-people-sheet";
 import { activityLocation, resolveViewer, type Viewer } from "@/lib/activity-data";
 import { getGroupDetail, leaveGroup, markGroupRead, respondToInvite, scrapGroup, sendGroupMessage, subscribeToGroupMessages, subscribeToGroupPresence, unsubscribeFromGroup, type GroupDetail, type GroupMessage } from "@/lib/group-data";
+import type { GroupBrief } from "@/lib/group-brief";
 
 type TimelineItem =
   | { id: string; kind: "notice"; at: string; text: string }
@@ -24,6 +25,8 @@ export default function GroupClient({ groupId }: { groupId: string }) {
   const [error, setError] = useState("");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [notice, setNotice] = useState("");
+  const [brief, setBrief] = useState<GroupBrief | null>(null);
+  const [briefLoading, setBriefLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async (quiet = false) => {
@@ -134,6 +137,22 @@ export default function GroupClient({ groupId }: { groupId: string }) {
     }
   }
 
+  async function generateBrief() {
+    if (briefLoading) return;
+    setBriefLoading(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/groups/${groupId}/brief`, { method: "POST" });
+      const payload = await response.json() as { brief?: GroupBrief; error?: string };
+      if (!response.ok || !payload.brief) throw new Error(payload.error || "The meetup brief couldn’t be created.");
+      setBrief(payload.brief);
+    } catch (briefError) {
+      setError(briefError instanceof Error ? briefError.message : "The meetup brief couldn’t be created.");
+    } finally {
+      setBriefLoading(false);
+    }
+  }
+
   if (loading) return <GroupEmpty title="Loading conversation…" />;
   if (!detail) return <GroupEmpty title="Conversation not found" body={error || "It may have been removed or you may no longer have access."} />;
 
@@ -156,6 +175,17 @@ export default function GroupClient({ groupId }: { groupId: string }) {
           <>
             <div className={styles.chatScroll} ref={scrollRef}>
               <p className={styles.chatDay}>Conversation</p>
+              {brief ? (
+                <section className={styles.aiBriefCard} aria-live="polite">
+                  <div className={styles.aiBriefHeading}><span><Sparkles size={16} /></span><div><small>Planned with Meta AI</small><h2>{brief.title}</h2></div><button type="button" onClick={() => void generateBrief()} disabled={briefLoading} aria-label="Refresh meetup brief"><RefreshCw size={15} /></button></div>
+                  <dl><div><dt>Meet</dt><dd>{brief.arrival}</dd></div><div><dt>Open with</dt><dd>{brief.opener}</dd></div><div><dt>Check in</dt><dd>{brief.checkIn}</dd></div></dl>
+                  <p>Built from activity details only—private messages stay private.</p>
+                </section>
+              ) : (
+                <section className={styles.aiBriefPrompt}>
+                  <span><Sparkles size={18} /></span><div><strong>Make meeting up easier</strong><p>Meta AI can turn the activity details into a quick arrival plan and conversation starter.</p></div><button type="button" onClick={() => void generateBrief()} disabled={briefLoading}>{briefLoading ? "Planning…" : "Plan meetup"}</button>
+                </section>
+              )}
               {detail.canScrap ? (
                 <section className={styles.scrapGroupCard}>
                   <span><Trash2 size={18} /></span>
