@@ -8,6 +8,7 @@
     "build": "next build --webpack",
     "start": "next start",
     "check:setup": "node scripts/check-setup.mjs",
+    "check:live": "node scripts/check-live-services.mjs",
     "check": "npm run check:setup && npm run typecheck && npm test",
     "smoke": "node scripts/smoke.mjs",
     "typecheck": "tsc --noEmit",

@@ -23,6 +23,7 @@ Useful checks:
 
 ```bash
 npm run check:setup
+npm run check:live
 npm run typecheck
 npm test
 npm run build

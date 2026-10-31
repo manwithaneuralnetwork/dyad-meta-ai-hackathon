@@ -1,6 +1,6 @@
 # Dyad golden-path readiness
 
-Status: **Checkpoint 3 implemented: groups, invitations, membership, and Realtime chat are wired. Live multi-account acceptance testing remains before judge hardening.**
+Status: **Checkpoint 4 is locally hardened: the grounded Meta meetup brief, deterministic fallback, offline mobile golden-path test, live-service checks, production health endpoint, and production build all pass. Hosting and deployed-URL smoke testing remain.**
 
 This document is the implementation contract for the hackathon build. It replaces the behavior assumptions in the earlier implementation while preserving the approved mobile UI.
 
@@ -78,7 +78,7 @@ Every transition needs a loading state, success feedback, and a recoverable erro
 | --- | --- | --- |
 | Meta Model API | Visible AI output | Key configured and live request verified |
 | Ticketmaster Discovery API | Official San Diego event source | Key configured and live request verified |
-| Supabase | Persistent real accounts, user data, and Realtime chat | Identity and activity-state schemas deployed; groups/chat come next |
+| Supabase | Persistent real accounts, user data, and Realtime chat | Identity, discovery, invitations, groups, notifications, and chat are deployed and live-tested |
 | Google OAuth | Not required for judge path | Do not configure yet |
 | Scheduled sync | Optional pre-demo refresh | Cron secret configured; hosting scheduler undecided |
 
@@ -88,9 +88,9 @@ Run `npm run check:setup` to validate the configuration shape without printing s
 
 ## Visible Meta AI decision
 
-The current redesigned UI no longer exposes the earlier AI planner. A group meetup brief remains the recommended visible AI moment, but it is explicitly deferred from the initial golden-path implementation. Do not add it until the user asks for it.
+The group meetup brief is the visible Meta AI moment. It is available inside accepted group chats and uses verified activity facts only.
 
-1. **Deferred recommendation: Group meetup brief.** A compact action in the group chat generates a friendly coordination card using the activity’s verified time/location and roster. It must not send private chat messages to the model, change bookings, or send messages.
+1. **Implemented: Group meetup brief.** A compact action in the group chat generates a friendly coordination card using the activity’s verified time and location. It does not send private chat messages to the model, change bookings, or send messages. An eight-second timeout falls back to a deterministic card with the same response shape.
 2. **Activity conversation starter.** The activity page generates a short, event-specific opener the user can send after forming a group.
 3. **Discovery explanation.** Each activity gets a one-sentence “Why this fits your interests” explanation without match scores. This is visible earlier but less socially distinctive.
 
@@ -104,8 +104,8 @@ The Google OAuth control has been replaced with a prominent `Continue as demo` b
 
 1. **Identity and onboarding — complete.** Real email/password accounts use Supabase Auth. Profiles, interests, and private locations persist behind RLS. Demo onboarding uses `sessionStorage` only.
 2. **Discovery and activity state — complete.** Feed fixtures are removed. Supabase stores the shared catalog plus real-user Interested, Saved, and Find company state; demo choices remain session-only.
-3. **Groups and live chat — implemented.** Invitations, accepted membership, messages, membership RLS, chat lists, activity-group links, and Realtime message subscriptions are wired. The hosted project still needs two or more real test accounts for live acceptance testing.
-4. **Judge hardening and deploy.** Connect the visible Meta moment, exercise fallbacks, deploy, run the production smoke suite, and rehearse the three-minute path.
+3. **Groups and live chat — complete.** Invitations, accepted membership, messages, membership RLS, chat lists, activity-group links, and Realtime message subscriptions are wired and have been exercised with two real test accounts.
+4. **Judge hardening and deploy — local hardening complete.** The visible Meta moment, fallback, offline mobile Playwright path, live-service checks, production health route, clean production build, and rehearsal script are complete. Choose hosting, configure its environment, deploy, and run the smoke suite against the deployed URL.
 
 ## Failure strategy
 
@@ -128,6 +128,7 @@ The Google OAuth control has been replaced with a prominent `Continue as demo` b
 ## Deployment checklist
 
 - Choose hosting before wiring callbacks or cron; Vercel is the lowest-friction default for this Next.js app.
+- Enable Supabase Auth leaked-password protection before opening unrestricted public signup; it is currently the only security-advisor warning.
 - Set the production `NEXT_PUBLIC_APP_URL`.
 - Add server-only environment variables in the host dashboard.
 - Keep the fallback catalog in the deployment bundle.
