@@ -1,6 +1,6 @@
 # Dyad golden-path readiness
 
-Status: **Checkpoint 4 is locally hardened: the grounded Meta meetup brief, deterministic fallback, offline mobile golden-path test, live-service checks, production health endpoint, and production build all pass. Hosting and deployed-URL smoke testing remain.**
+Status: **Checkpoint 4 is locally hardened: the grounded Meta meetup brief, deterministic fallback, offline mobile golden-path test, live-service checks, production health endpoint, and production build all pass. The Netlify project exists; Git connection, production environment values, first deploy, and deployed-URL smoke testing remain.**
 
 This document is the implementation contract for the hackathon build. It replaces the behavior assumptions in the earlier implementation while preserving the approved mobile UI.
 
@@ -127,7 +127,9 @@ The Google OAuth control has been replaced with a prominent `Continue as demo` b
 
 ## Deployment checklist
 
-- Choose hosting before wiring callbacks or cron; Vercel is the lowest-friction default for this Next.js app.
+- Netlify project: `dyad-san-diego` on the `dyrekampen` team. Connect `manwithaneuralnetwork/dyad-meta-ai-hackathon` with `main` as the production branch; `netlify.toml` supplies the Next.js build settings.
+- In Netlify, add all values from `.env.example`. Give server secrets (`MODEL_API_KEY`, `TICKETMASTER_API_KEY`, `CRON_SECRET`, `SUPABASE_SECRET_KEY`) Builds and Functions scope. The `NEXT_PUBLIC_` values are intentionally public but still require a redeploy after editing.
+- Set `NEXT_PUBLIC_APP_URL=https://dyad-san-diego.netlify.app`, trigger the first production deploy, then run `npm run smoke -- https://dyad-san-diego.netlify.app`.
 - Enable Supabase Auth leaked-password protection before opening unrestricted public signup; it is currently the only security-advisor warning.
 - Set the production `NEXT_PUBLIC_APP_URL`.
 - Add server-only environment variables in the host dashboard.
