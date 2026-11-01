@@ -4,3 +4,4 @@
 
 [build.environment]
   NETLIFY_NEXT_SKEW_PROTECTION = "true"
+  SECRETS_SCAN_OMIT_KEYS = "META_MODEL"
