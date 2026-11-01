@@ -98,9 +98,15 @@ export type Database = {
         Relationships: [];
       };
       messages: {
-        Row: { id: string; group_id: string; sender_id: string; body: string; created_at: string };
-        Insert: { id?: string; group_id: string; sender_id: string; body: string; created_at?: string };
-        Update: { id?: string; group_id?: string; sender_id?: string; body?: string; created_at?: string };
+        Row: { id: string; group_id: string; sender_id: string; author_type: "member" | "muse"; body: string; created_at: string };
+        Insert: { id?: string; group_id: string; sender_id: string; author_type?: "member" | "muse"; body: string; created_at?: string };
+        Update: { id?: string; group_id?: string; sender_id?: string; author_type?: "member" | "muse"; body?: string; created_at?: string };
+        Relationships: [];
+      };
+      muse_request_limits: {
+        Row: { group_id: string; user_id: string; requested_at: string };
+        Insert: { group_id: string; user_id: string; requested_at?: string };
+        Update: { group_id?: string; user_id?: string; requested_at?: string };
         Relationships: [];
       };
       notification_reads: {
@@ -205,6 +211,10 @@ export type Database = {
           p_source: string;
         };
         Returns: undefined;
+      };
+      claim_muse_group_turn: {
+        Args: { p_group_id: string; p_user_id: string; p_cooldown_seconds?: number };
+        Returns: boolean;
       };
       create_activity_group: {
         Args: { p_activity_id: string; p_invitee_ids: string[] };

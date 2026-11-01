@@ -10,6 +10,7 @@ import InvitePeopleSheet from "./invite-people-sheet";
 import { activityLocation, resolveViewer, type Viewer } from "@/lib/activity-data";
 import { getGroupDetail, leaveGroup, markGroupRead, respondToInvite, scrapGroup, sendGroupMessage, subscribeToGroupMessages, subscribeToGroupPresence, unsubscribeFromGroup, type GroupDetail, type GroupMessage } from "@/lib/group-data";
 import type { GroupBrief } from "@/lib/group-brief";
+import { containsMuseMention } from "@/lib/muse-chat";
 
 type TimelineItem =
   | { id: string; kind: "notice"; at: string; text: string }
@@ -27,6 +28,7 @@ export default function GroupClient({ groupId }: { groupId: string }) {
   const [notice, setNotice] = useState("");
   const [brief, setBrief] = useState<GroupBrief | null>(null);
   const [briefLoading, setBriefLoading] = useState(false);
+  const [museThinking, setMuseThinking] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async (quiet = false) => {
@@ -103,11 +105,33 @@ export default function GroupClient({ groupId }: { groupId: string }) {
     try {
       const message = await sendGroupMessage(groupId, viewer.userId, body);
       setDetail((current) => current ? { ...current, messages: current.messages.some((item) => item.id === message.id) ? current.messages : [...current.messages, message] } : current);
+      if (containsMuseMention(body)) void requestMuseResponse(message.id);
     } catch (sendError) {
       setDraft(body);
       setError(sendError instanceof Error ? sendError.message : "Your message couldn’t be sent.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function requestMuseResponse(triggerMessageId: string) {
+    setMuseThinking(true);
+    try {
+      const response = await fetch(`/api/groups/${groupId}/muse`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ triggerMessageId }),
+      });
+      const payload = await response.json() as { message?: GroupMessage; error?: string };
+      if (!response.ok || !payload.message) throw new Error(payload.error || "Muse couldn’t reply.");
+      setDetail((current) => current ? {
+        ...current,
+        messages: current.messages.some((item) => item.id === payload.message?.id) ? current.messages : [...current.messages, payload.message!],
+      } : current);
+    } catch (museError) {
+      setNotice(museError instanceof Error ? museError.message : "Muse couldn’t reply right now.");
+    } finally {
+      setMuseThinking(false);
     }
   }
 
@@ -195,16 +219,27 @@ export default function GroupClient({ groupId }: { groupId: string }) {
               ) : null}
               {timeline.map((item) => {
                 if (item.kind === "notice") return <p className={item.id === "created" ? styles.chatNotice : styles.chatEvent} key={item.id}>{item.text}</p>;
+                if (item.message.author_type === "muse") return (
+                  <div className={`${styles.messageRow} ${styles.museMessageRow}`} key={item.id}>
+                    <span className={`${styles.chatAvatar} ${styles.museAvatar}`}><Sparkles size={14} /></span>
+                    <div className={styles.messageStack}>
+                      <span className={`${styles.messageName} ${styles.museName}`}>Muse <em>Meta AI</em></span>
+                      <p className={`${styles.messageBubble} ${styles.messageBubbleMuse}`}>{item.message.body}</p>
+                      <time className={styles.messageTime}>{formatTime(item.at)}</time>
+                    </div>
+                  </div>
+                );
                 const own = viewer.kind === "real" && item.message.sender_id === viewer.userId;
                 const profile = profileById.get(item.message.sender_id);
                 if (own) return <div className={styles.messageRowOwn} key={item.id}><div><p className={`${styles.messageBubble} ${styles.messageBubbleOwn}`}>{item.message.body}</p><time className={`${styles.messageTime} ${styles.messageTimeOwn}`}>{formatTime(item.at)}</time></div></div>;
                 return <div className={styles.messageRow} key={item.id}><span className={styles.chatAvatar}>{initials(profile?.display_name)}</span><div className={styles.messageStack}><span className={styles.messageName}>{profile?.display_name || "Member"}</span><p className={styles.messageBubble}>{item.message.body}</p><time className={styles.messageTime}>{formatTime(item.at)}</time></div></div>;
               })}
+              {museThinking ? <div className={`${styles.messageRow} ${styles.museMessageRow}`} aria-live="polite"><span className={`${styles.chatAvatar} ${styles.museAvatar}`}><Sparkles size={14} /></span><div className={styles.messageStack}><span className={`${styles.messageName} ${styles.museName}`}>Muse <em>Meta AI</em></span><p className={`${styles.messageBubble} ${styles.messageBubbleMuse} ${styles.museTyping}`}>Thinking<span>…</span></p></div></div> : null}
               {error ? <p className={styles.pageError} role="alert">{error}</p> : null}
               {notice ? <p className={styles.chatNotice} role="status">{notice}</p> : null}
             </div>
             <form className={styles.composer} onSubmit={(event) => { event.preventDefault(); void sendMessage(); }}>
-              <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Message the group" aria-label="Message the group" maxLength={2000} />
+              <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Message · @muse for help" aria-label="Message the group" maxLength={2000} />
               <button className={styles.sendButton} type="submit" disabled={busy || !draft.trim()} aria-label="Send message"><Send size={18} /></button>
             </form>
           </>

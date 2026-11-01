@@ -67,7 +67,7 @@ export async function listMyGroups(viewer: Viewer): Promise<GroupSummary[]> {
   const [activitiesResult, memberRowsResult, messagesResult] = await Promise.all([
     supabase.from("activities").select("*").in("id", activityIds),
     supabase.from("group_members").select("group_id").in("group_id", groupIds),
-    supabase.from("messages").select("group_id, body, created_at, sender_id").in("group_id", groupIds).order("created_at", { ascending: false }),
+    supabase.from("messages").select("group_id, body, created_at, sender_id, author_type").in("group_id", groupIds).order("created_at", { ascending: false }),
   ]);
   if (activitiesResult.error) throw activitiesResult.error;
   if (memberRowsResult.error) throw memberRowsResult.error;
@@ -81,7 +81,7 @@ export async function listMyGroups(viewer: Viewer): Promise<GroupSummary[]> {
   const activityById = new Map(activitiesResult.data.map((activity) => [activity.id, activity]));
   const memberCount = new Map<string, number>();
   for (const row of memberRowsResult.data) memberCount.set(row.group_id, (memberCount.get(row.group_id) ?? 0) + 1);
-  const latestMessage = new Map<string, { body: string; created_at: string; sender_id: string }>();
+  const latestMessage = new Map<string, { body: string; created_at: string; sender_id: string; author_type: "member" | "muse" }>();
   for (const message of messagesResult.data) if (!latestMessage.has(message.group_id)) latestMessage.set(message.group_id, message);
   const senderById = new Map(senders.map((profile) => [profile.id, profile.display_name]));
   const unreadByGroup = new Map<string, number>();
@@ -101,7 +101,7 @@ export async function listMyGroups(viewer: Viewer): Promise<GroupSummary[]> {
       activity,
       status: "member" as const,
       memberCount: memberCount.get(group.id) ?? 0,
-      lastMessage: message ? `${message.sender_id === viewer.userId ? "You" : senderById.get(message.sender_id) || "Member"}: ${message.body}` : "Group created — say hello!",
+      lastMessage: message ? `${message.author_type === "muse" ? "Muse" : message.sender_id === viewer.userId ? "You" : senderById.get(message.sender_id) || "Member"}: ${message.body}` : "Group created — say hello!",
       lastActivityAt: message?.created_at || group.last_message_at,
       unreadCount: unreadByGroup.get(group.id) ?? 0,
     }];
