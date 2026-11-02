@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Bell, Check, Compass, MailOpen, X } from "lucide-react";
+import { Bell, Check, Compass, MailOpen, UserPlus, X } from "lucide-react";
 import styles from "../dyad.module.css";
 import { AppHeader, BottomNavigation } from "../app-navigation";
 import { resolveViewer } from "@/lib/activity-data";
@@ -49,9 +49,9 @@ export default function InboxPage() {
               {notifications.map((notification) => {
                 const accepted = notification.title.endsWith("accepted");
                 const declined = notification.title.endsWith("declined");
-                return <Link className={styles.chatListRow} href={`/group?id=${notification.groupId}`} key={notification.id}>
+                return <Link className={styles.chatListRow} href={notification.href} key={`${notification.kind}-${notification.id}`}>
                   <span className={`${styles.chatListAvatar} ${styles.inboxNotificationIcon}`}>
-                    {notification.kind === "group_invite" ? <MailOpen size={19} /> : accepted ? <Check size={19} /> : declined ? <X size={19} /> : <Bell size={19} />}
+                    {notification.kind === "friend_request" ? <UserPlus size={19} /> : notification.kind === "group_invite" ? <MailOpen size={19} /> : accepted ? <Check size={19} /> : declined ? <X size={19} /> : <Bell size={19} />}
                   </span>
                   <span className={styles.chatListCopy}><strong>{notification.title}</strong><span>{notification.body}</span></span>
                   <span className={styles.chatListMeta}><time>{relativeTime(notification.createdAt)}</time>{notification.unread ? <span>New</span> : null}</span>
@@ -62,7 +62,7 @@ export default function InboxPage() {
             <section className={styles.emptyState}>
               <span className={styles.emptyStateIcon}><Bell size={22} /></span>
               <h2>You’re all caught up</h2>
-              <p>New group invitations and plan updates will appear here.</p>
+              <p>New group invitations, Friend requests, and plan updates will appear here.</p>
               <Link href="/feed"><Compass size={15} />Explore Discovery</Link>
             </section>
           )}

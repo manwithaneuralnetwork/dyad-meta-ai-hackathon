@@ -79,10 +79,22 @@ export type Database = {
         Update: { activity_id?: string; interested?: boolean; saved?: boolean; updated_at?: string; user_id?: string };
         Relationships: [];
       };
+      activity_matchmaking: {
+        Row: { user_id: string; activity_id: string; min_group_size: number; max_group_size: number; status: "waiting" | "matched" | "cancelled"; group_id: string | null; match_reason: string; created_at: string; updated_at: string };
+        Insert: { user_id: string; activity_id: string; min_group_size: number; max_group_size: number; status?: "waiting" | "matched" | "cancelled"; group_id?: string | null; match_reason?: string; created_at?: string; updated_at?: string };
+        Update: { user_id?: string; activity_id?: string; min_group_size?: number; max_group_size?: number; status?: "waiting" | "matched" | "cancelled"; group_id?: string | null; match_reason?: string; created_at?: string; updated_at?: string };
+        Relationships: [];
+      };
+      friendships: {
+        Row: { id: string; requester_id: string; addressee_id: string; status: "pending" | "accepted" | "declined"; created_at: string; responded_at: string | null };
+        Insert: { id?: string; requester_id: string; addressee_id: string; status?: "pending" | "accepted" | "declined"; created_at?: string; responded_at?: string | null };
+        Update: { id?: string; requester_id?: string; addressee_id?: string; status?: "pending" | "accepted" | "declined"; created_at?: string; responded_at?: string | null };
+        Relationships: [];
+      };
       groups: {
-        Row: { id: string; activity_id: string; created_by: string; created_at: string; updated_at: string; last_message_at: string };
-        Insert: { id?: string; activity_id: string; created_by: string; created_at?: string; updated_at?: string; last_message_at?: string };
-        Update: { id?: string; activity_id?: string; created_by?: string; created_at?: string; updated_at?: string; last_message_at?: string };
+        Row: { id: string; activity_id: string; created_by: string; created_at: string; updated_at: string; last_message_at: string; creation_mode: "manual" | "matchmaking"; match_reason: string };
+        Insert: { id?: string; activity_id: string; created_by: string; created_at?: string; updated_at?: string; last_message_at?: string; creation_mode?: "manual" | "matchmaking"; match_reason?: string };
+        Update: { id?: string; activity_id?: string; created_by?: string; created_at?: string; updated_at?: string; last_message_at?: string; creation_mode?: "manual" | "matchmaking"; match_reason?: string };
         Relationships: [];
       };
       group_members: {
@@ -218,6 +230,10 @@ export type Database = {
       };
       create_activity_group: {
         Args: { p_activity_id: string; p_invitee_ids: string[] };
+        Returns: string;
+      };
+      create_matchmade_activity_group: {
+        Args: { p_activity_id: string; p_creator_id: string; p_participant_ids: string[]; p_match_reason: string };
         Returns: string;
       };
       invite_more_to_group: {

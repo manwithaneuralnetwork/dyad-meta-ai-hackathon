@@ -195,6 +195,35 @@
 .checkboxLabel input:checked + .checkboxMark { border-color: var(--dyad-aqua); background: var(--dyad-aqua); color: var(--dyad-ink); }
 .sheetFooter { padding-top: 15px; }
 .createGroupButton { display: inline-flex; width: 100%; min-height: 48px; align-items: center; justify-content: center; gap: 7px; padding: 0 20px; border: 0; border-radius: 999px; background: var(--dyad-aqua); color: var(--dyad-ink); font-size: 14px; font-weight: 820; }
+.matchmakingSheet { max-height: 91dvh; overflow-y: auto; scrollbar-width: none; }
+.matchmakingSheet::-webkit-scrollbar { display: none; }
+.matchmakerCard { margin-top: 18px; padding: 16px; border: 1px solid color-mix(in srgb, var(--dyad-aqua-deep) 40%, var(--dyad-border)); border-radius: 19px; background: color-mix(in srgb, var(--dyad-aqua) 8%, white); }
+.matchmakerHeading { display: grid; grid-template-columns: 38px minmax(0,1fr); align-items: center; gap: 10px; }
+.matchmakerHeading > span { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 12px; background: var(--dyad-ink); color: var(--dyad-aqua); }
+.matchmakerHeading small { display: block; margin-bottom: 2px; color: var(--dyad-aqua-deep); font-size: 8px; font-weight: 850; letter-spacing: .65px; text-transform: uppercase; }
+.matchmakerHeading h3 { margin: 0; font-size: 17px; letter-spacing: -.55px; }
+.matchmakerCard > p { margin: 12px 0 14px; color: var(--dyad-muted); font-size: 10px; line-height: 1.5; }
+.groupSizeOptions { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
+.groupSizeOptions button { display: grid; gap: 3px; min-width: 0; min-height: 52px; place-content: center; padding: 6px; border: 1px solid var(--dyad-border); border-radius: 12px; background: white; color: var(--dyad-ink); text-align: center; }
+.groupSizeOptions strong { font-size: 10px; }
+.groupSizeOptions span { color: var(--dyad-muted); font-size: 8px; }
+.groupSizeOptions .groupSizeSelected { border-color: var(--dyad-aqua-deep); background: var(--dyad-aqua); }
+.groupSizeOptions .groupSizeSelected span { color: #27534b; }
+.matchWaiting { display: grid; grid-template-columns: 18px 1fr; gap: 7px; align-items: start; margin-top: 12px; padding: 10px 11px; border-radius: 11px; background: white; color: var(--dyad-aqua-deep); }
+.matchWaiting strong, .matchWaiting small { display: block; }
+.matchWaiting strong { font-size: 10px; }
+.matchWaiting small { margin-top: 2px; color: var(--dyad-muted); font-size: 8px; line-height: 1.35; }
+.matchButton { display: flex; width: 100%; min-height: 43px; align-items: center; justify-content: center; gap: 7px; margin-top: 12px; border: 0; border-radius: 999px; background: var(--dyad-ink); color: white; font-size: 11px; font-weight: 820; }
+.matchButton svg { color: var(--dyad-aqua); }
+.matchButton:disabled, .leaveMatchButton:disabled { opacity: .45; }
+.leaveMatchButton { display: block; margin: 9px auto 0; padding: 3px 6px; border: 0; background: transparent; color: var(--dyad-muted); font-size: 9px; font-weight: 750; text-decoration: underline; }
+.matchDivider { display: flex; align-items: center; gap: 10px; margin: 17px 0 12px; color: #929996; font-size: 8px; font-weight: 800; letter-spacing: .35px; text-transform: uppercase; }
+.matchDivider::before, .matchDivider::after { content: ""; height: 1px; flex: 1; background: var(--dyad-border); }
+.friendPickerHeading { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin-bottom: 11px; }
+.friendPickerHeading h3 { margin: 0 0 3px; font-size: 15px; }
+.friendPickerHeading p { margin: 0; color: var(--dyad-muted); font-size: 9px; }
+.friendPickerHeading > a { flex: 0 0 auto; color: var(--dyad-aqua-deep); font-size: 9px; font-weight: 800; }
+.matchNotice { margin: 0 0 10px; padding: 9px 11px; border-radius: 10px; background: color-mix(in srgb, var(--dyad-aqua) 12%, white); color: var(--dyad-aqua-deep); font-size: 9px; font-weight: 720; line-height: 1.4; }
 
 .groupPage { display: flex; height: 100vh; height: 100dvh; min-height: 0; flex-direction: column; }
 .groupHeader { display: grid; grid-template-columns: 30px 34px minmax(0,1fr) auto; align-items: center; gap: 9px; flex: 0 0 auto; padding: 12px 13px 11px; border-bottom: 1px solid var(--dyad-border); background: white; }
@@ -253,6 +282,7 @@
 .messageRowOwn { display: flex; justify-content: flex-end; margin-top: 15px; }
 .messageRowOwn > div { display: flex; width: fit-content; max-width: 82%; min-width: 0; align-items: flex-end; flex-direction: column; }
 .chatAvatar { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--dyad-ink); color: white; font-size: 9px; font-weight: 820; transform: translateY(-13px); }
+.chatProfileLink { display: block; width: 32px; height: 32px; color: inherit; }
 .chatAvatarAqua { background: var(--dyad-aqua); color: var(--dyad-ink); }
 .messageStack { min-width: 0; }
 .messageName { display: block; margin: 0 0 5px 3px; color: var(--dyad-muted); font-size: 10px; font-weight: 760; }
@@ -308,6 +338,7 @@
 .profileMenu { position: absolute; z-index: 61; top: 39px; right: 0; width: 140px; padding: 6px; border: 1px solid var(--dyad-border); border-radius: 13px; background: white; box-shadow: 0 12px 30px rgba(17,21,20,.14); }
 .profileMenu button { display: flex; width: 100%; min-height: 38px; align-items: center; gap: 9px; padding: 0 10px; border: 0; border-radius: 9px; background: white; color: #a93834; font-size: 11px; font-weight: 760; }
 .profileMenu button:hover { background: #fff2f1; }
+.profileActionError { margin: -5px 22px 10px; color: #a63b36; font-size: 10px; text-align: center; }
 
 .signupPage { position: relative; display: flex; min-height: 100dvh; flex-direction: column; }
 .signupHeader { display: grid; grid-template-columns: 40px 1fr 40px; align-items: center; padding: 20px 18px; }
@@ -414,6 +445,17 @@
 .inboxScroll > h1 { margin-bottom: 7px; }
 .inboxIntro { margin: 0 0 20px; color: var(--dyad-muted); font-size: 11px; }
 .inboxNotificationIcon { background: color-mix(in srgb, var(--dyad-aqua) 22%, white); color: var(--dyad-aqua-deep); }
+.friendsScroll > h1 { margin-bottom: 7px; }
+.friendsIntro { margin: 0 0 20px; color: var(--dyad-muted); font-size: 11px; }
+.friendList { border-top: 1px solid var(--dyad-border); }
+.friendRow { display: grid; min-height: 73px; grid-template-columns: 46px minmax(0,1fr) 18px; align-items: center; gap: 11px; border-bottom: 1px solid var(--dyad-border); color: var(--dyad-ink); }
+.friendAvatar { display: grid; width: 44px; height: 44px; place-items: center; overflow: hidden; border-radius: 50%; background: color-mix(in srgb, var(--dyad-aqua) 22%, white); color: var(--dyad-aqua-deep); }
+.friendAvatar img { width: 100%; height: 100%; object-fit: cover; }
+.friendCopy { min-width: 0; }
+.friendCopy strong, .friendCopy span { display: block; }
+.friendCopy strong { margin-bottom: 4px; font-size: 13px; }
+.friendCopy span { overflow: hidden; color: var(--dyad-muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.friendChevron { color: #a5aca9; font-size: 23px; line-height: 1; }
 
 .youScroll { padding-bottom: 34px; }
 .youScroll > h1 { margin-bottom: 24px; }

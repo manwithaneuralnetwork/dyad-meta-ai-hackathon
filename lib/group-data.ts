@@ -31,9 +31,8 @@ export type GroupDetail = {
 
 export type InboxNotification = {
   id: string;
-  kind: "group_invite" | "invite_response";
-  activity: ActivityRecord;
-  groupId: string;
+  kind: "group_invite" | "invite_response" | "friend_request" | "friend_response";
+  href: string;
   createdAt: string;
   title: string;
   body: string;
@@ -113,39 +112,45 @@ export async function listInboxNotifications(viewer: Viewer): Promise<InboxNotif
   const supabase = createSupabaseBrowserClient();
   if (!supabase) return [];
 
-  const { data: invites, error: invitesError } = await supabase
-    .from("group_invites")
-    .select("*")
-    .or(`invitee_id.eq.${viewer.userId},inviter_id.eq.${viewer.userId}`)
-    .order("created_at", { ascending: false });
+  const [inviteResult, friendshipResult, readsResult] = await Promise.all([
+    supabase.from("group_invites").select("*").or(`invitee_id.eq.${viewer.userId},inviter_id.eq.${viewer.userId}`).order("created_at", { ascending: false }),
+    supabase.from("friendships").select("*").or(`requester_id.eq.${viewer.userId},addressee_id.eq.${viewer.userId}`).order("created_at", { ascending: false }),
+    supabase.from("notification_reads").select("notification_key").eq("user_id", viewer.userId),
+  ]);
+  const { data: invites, error: invitesError } = inviteResult;
   if (invitesError) throw invitesError;
+  if (friendshipResult.error) throw friendshipResult.error;
+  if (readsResult.error) throw readsResult.error;
 
   const relevantInvites = invites.filter((invite) =>
     (invite.invitee_id === viewer.userId && invite.status === "pending")
     || (invite.inviter_id === viewer.userId && invite.status !== "pending")
   );
-  if (!relevantInvites.length) return [];
-
   const groupIds = [...new Set(relevantInvites.map((invite) => invite.group_id))];
-  const { data: groups, error: groupsError } = await supabase.from("groups").select("id, activity_id").in("id", groupIds);
+  const { data: groups, error: groupsError } = groupIds.length ? await supabase.from("groups").select("id, activity_id").in("id", groupIds) : { data: [], error: null };
   if (groupsError) throw groupsError;
   const activityIds = [...new Set(groups.map((group) => group.activity_id))];
-  const profileIds = [...new Set(relevantInvites.map((invite) => invite.invitee_id === viewer.userId ? invite.inviter_id : invite.invitee_id))];
-  const [activitiesResult, profilesResult, readsResult] = await Promise.all([
-    supabase.from("activities").select("*").in("id", activityIds),
-    supabase.from("profiles").select("id, display_name").in("id", profileIds),
-    supabase.from("notification_reads").select("notification_key").eq("user_id", viewer.userId),
+  const relevantFriendships = friendshipResult.data.filter((friendship) =>
+    (friendship.addressee_id === viewer.userId && friendship.status === "pending")
+    || (friendship.requester_id === viewer.userId && friendship.status !== "pending")
+  );
+  const profileIds = [...new Set([
+    ...relevantInvites.map((invite) => invite.invitee_id === viewer.userId ? invite.inviter_id : invite.invitee_id),
+    ...relevantFriendships.map((friendship) => friendship.requester_id === viewer.userId ? friendship.addressee_id : friendship.requester_id),
+  ])];
+  const [activitiesResult, profilesResult] = await Promise.all([
+    activityIds.length ? supabase.from("activities").select("*").in("id", activityIds) : Promise.resolve({ data: [], error: null }),
+    profileIds.length ? supabase.from("profiles").select("id, display_name").in("id", profileIds) : Promise.resolve({ data: [], error: null }),
   ]);
   if (activitiesResult.error) throw activitiesResult.error;
   if (profilesResult.error) throw profilesResult.error;
-  if (readsResult.error) throw readsResult.error;
 
   const groupById = new Map(groups.map((group) => [group.id, group]));
   const activityById = new Map(activitiesResult.data.map((activity) => [activity.id, activity]));
   const nameById = new Map(profilesResult.data.map((profile) => [profile.id, profile.display_name]));
   const readKeys = new Set(readsResult.data.map((row) => row.notification_key));
 
-  return relevantInvites.flatMap((invite) => {
+  const groupNotifications: InboxNotification[] = relevantInvites.flatMap((invite) => {
     const group = groupById.get(invite.group_id);
     const activity = group ? activityById.get(group.activity_id) : undefined;
     if (!activity) return [];
@@ -155,8 +160,7 @@ export async function listInboxNotifications(viewer: Viewer): Promise<InboxNotif
     return [{
       id: invite.id,
       kind: incoming ? "group_invite" as const : "invite_response" as const,
-      activity,
-      groupId: invite.group_id,
+      href: `/group?id=${invite.group_id}`,
       createdAt: invite.responded_at || invite.created_at,
       title: incoming ? "New group invitation" : `Invitation ${invite.status}`,
       body: incoming
@@ -164,7 +168,23 @@ export async function listInboxNotifications(viewer: Viewer): Promise<InboxNotif
         : `${personName} ${invite.status} your invitation to ${activity.title}.`,
       unread: !readKeys.has(notificationKey(incoming ? "group_invite" : "invite_response", invite.id)),
     }];
-  }).sort((left, right) => +new Date(right.createdAt) - +new Date(left.createdAt));
+  });
+  const friendNotifications: InboxNotification[] = relevantFriendships.map((friendship) => {
+    const incoming = friendship.addressee_id === viewer.userId;
+    const personId = incoming ? friendship.requester_id : friendship.addressee_id;
+    const personName = nameById.get(personId) || "Someone";
+    const kind = incoming ? "friend_request" as const : "friend_response" as const;
+    return {
+      id: friendship.id,
+      kind,
+      href: `/profile?person=${personId}`,
+      createdAt: friendship.responded_at || friendship.created_at,
+      title: incoming ? "New Friend request" : `Friend request ${friendship.status}`,
+      body: incoming ? `${personName} wants to be Friends.` : `${personName} ${friendship.status} your Friend request.`,
+      unread: !readKeys.has(notificationKey(kind, friendship.id)),
+    };
+  });
+  return [...groupNotifications, ...friendNotifications].sort((left, right) => +new Date(right.createdAt) - +new Date(left.createdAt));
 }
 
 function notificationKey(kind: InboxNotification["kind"], id: string) {
@@ -323,6 +343,7 @@ export function subscribeToNotificationChanges(onChange: () => void): RealtimeCh
     .channel(`dyad-notification-counts:${crypto.randomUUID()}`)
     .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, onChange)
     .on("postgres_changes", { event: "*", schema: "public", table: "group_invites" }, onChange)
+    .on("postgres_changes", { event: "*", schema: "public", table: "friendships" }, onChange)
     .subscribe();
 }
 

@@ -55,7 +55,7 @@ export default function EditProfilePage() {
         <label><span>Age</span><input type="number" inputMode="numeric" min={18} max={120} placeholder="Your age" value={profile.age} onChange={(event) => setProfile({ ...profile, age: event.target.value })} /></label>
         <label><span>One-line introduction</span><input maxLength={90} value={profile.intro} onChange={(event) => setProfile({ ...profile, intro: event.target.value })} /></label>
         <label><span>Bio</span><textarea rows={5} value={profile.bio} onChange={(event) => setProfile({ ...profile, bio: event.target.value })} /></label>
-        <p className={styles.settingsHint}>This is what people see before deciding whether to connect or invite you.</p>
+        <p className={styles.settingsHint}>This is what people see before deciding whether to add you or make a plan.</p>
         <button className={styles.settingsSaveButton} type="button" onClick={() => void saveProfile()} disabled={!profile.name.trim() || Number(profile.age) < 18 || Number(profile.age) > 120}>{saved ? <><Check size={17} />Saved</> : "Save changes"}</button>
       </div>
     </SettingsShell>

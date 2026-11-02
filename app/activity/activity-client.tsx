@@ -8,7 +8,6 @@ import FindCompanySheet from "./find-company-sheet";
 import SmartBackButton from "../smart-back-button";
 import {
   activityLocation,
-  countDiscoverablePeople,
   formatActivityDate,
   getActivity,
   loadActivityStates,
@@ -25,7 +24,6 @@ export default function ActivityClient({ activityId, openCompanyInitially }: { a
   const [activity, setActivity] = useState<ActivityRecord | null>(null);
   const [state, setState] = useState<ActivityUiState>(emptyUiState);
   const [viewer, setViewer] = useState<Viewer>({ kind: "anonymous" });
-  const [peopleCount, setPeopleCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(Boolean(activityId));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -40,14 +38,10 @@ export default function ActivityClient({ activityId, openCompanyInitially }: { a
         setActivity(null);
         return;
       }
-      const [nextStates, nextCount] = await Promise.all([
-        loadActivityStates([activityId], nextViewer),
-        countDiscoverablePeople(activityId, nextViewer),
-      ]);
+      const nextStates = await loadActivityStates([activityId], nextViewer);
       setActivity(nextActivity);
       setViewer(nextViewer);
       setState(nextStates[activityId] ?? emptyUiState);
-      setPeopleCount(nextCount);
     } catch {
       setError("This activity couldn’t be loaded right now.");
     } finally {
@@ -82,14 +76,14 @@ export default function ActivityClient({ activityId, openCompanyInitially }: { a
   const facts = [
     { label: "When", value: formatActivityDate(activity.starts_at, { long: true }), Icon: CalendarDays },
     { label: "Where", value: activityLocation(activity) || activity.city, Icon: MapPin },
-    { label: "Looking for company", value: peopleCount === null ? "Available to real accounts" : `${peopleCount} ${peopleCount === 1 ? "person is" : "people are"} visible`, Icon: UsersRound },
+    { label: "Finding company", value: "Muse can match a group around your preferences", Icon: UsersRound },
     { label: "Tickets", value: activity.price_label || "See organizer", Icon: Ticket },
   ];
   const isTicketmaster = activity.source_name.trim().toLowerCase() === "ticketmaster";
 
   async function toggleInterested() {
     const interested = !state.interested;
-    await persist({ ...state, interested, discoverable: interested });
+    await persist({ ...state, interested, discoverable: false });
   }
 
   return (
@@ -114,10 +108,10 @@ export default function ActivityClient({ activityId, openCompanyInitially }: { a
               <Link className={`${styles.activityAction} ${styles.activityActionDark}`} href={`/group?id=${state.groupId}`}><UsersRound size={16} />Open group</Link>
             </> : <>
               <button className={`${styles.activityAction} ${state.interested ? styles.actionSelected : ""}`} type="button" disabled={busy} onClick={() => void toggleInterested()}><Heart size={16} fill={state.interested ? "currentColor" : "none"} />Interested</button>
-              <FindCompanySheet activity={activity} viewer={viewer} initiallyOpen={openCompanyInitially} onActivate={() => persist({ ...state, interested: true, discoverable: true })} />
+              <FindCompanySheet activity={activity} viewer={viewer} initiallyOpen={openCompanyInitially} />
             </>}
           </div>
-          {state.groupId ? <p className={styles.interestNotice} role="status">You’re already in this activity’s group.</p> : state.interested ? <p className={styles.interestNotice} role="status">You’re open to invitations from other Interested people.</p> : null}
+          {state.groupId ? <p className={styles.interestNotice} role="status">You’re already in this activity’s group.</p> : state.interested ? <p className={styles.interestNotice} role="status">Saved under your Interested activities.</p> : null}
           {error ? <p className={styles.pageError} role="alert">{error}</p> : null}
 
           <dl className={styles.activityFacts}>{facts.map(({ label, value, Icon }) => <div className={styles.activityFact} key={label}><span className={styles.factIcon}><Icon size={17} aria-hidden="true" /></span><div><dt>{label}</dt><dd>{value}</dd></div></div>)}</dl>

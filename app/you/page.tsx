@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Bell, ChevronRight, Inbox, MapPin, Pencil, Tags } from "lucide-react";
+import { Bell, ChevronRight, Inbox, MapPin, Pencil, Tags, UsersRound } from "lucide-react";
 import styles from "../dyad.module.css";
 import { AppHeader, BottomNavigation } from "../app-navigation";
 import { getViewerProfile, resolveViewer, type PublicProfile, type Viewer } from "@/lib/activity-data";
@@ -10,6 +10,7 @@ import { getNotificationCounts, subscribeToNotificationChanges, unsubscribeFromG
 
 const accountSettings = [
   { label: "Inbox", detail: "Invitations and plan updates", href: "/inbox", Icon: Inbox },
+  { label: "Friends", detail: "People you want to make plans with again", href: "/friends", Icon: UsersRound },
   { label: "Edit profile", detail: "Photo, bio, and one-liner", href: "/settings/profile", Icon: Pencil },
   { label: "Location & distance", detail: "Shared location or a street address", href: "/settings/location", Icon: MapPin },
   { label: "Interests", detail: "Manage what shows up in Discovery", href: "/settings/interests", Icon: Tags },

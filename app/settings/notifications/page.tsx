@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import SettingsShell from "../settings-shell";
 import styles from "../../dyad.module.css";
 
-const defaults = { enabled: true, invites: true, messages: true, reminders: true, connections: false };
+const defaults = { enabled: true, invites: true, messages: true, reminders: true, friends: false };
 
 export default function NotificationsSettingsPage() {
   const [values, setValues] = useState(defaults);
@@ -24,9 +24,9 @@ export default function NotificationsSettingsPage() {
 
   const rows = [
     { key: "invites" as const, label: "Group invitations", detail: "When someone invites you to join a plan" },
-    { key: "messages" as const, label: "New messages", detail: "Messages from groups and connections" },
+    { key: "messages" as const, label: "New messages", detail: "Messages from groups and Friends" },
     { key: "reminders" as const, label: "Activity reminders", detail: "A helpful heads-up before an activity starts" },
-    { key: "connections" as const, label: "Connection activity", detail: "Requests and new connection updates" },
+    { key: "friends" as const, label: "Friend activity", detail: "Requests and new Friend updates" },
   ];
 
   return (

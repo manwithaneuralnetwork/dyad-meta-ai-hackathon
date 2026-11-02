@@ -53,7 +53,7 @@ function EventRow({
             <button className={styles.actionPill} type="button" disabled><Heart size={12} aria-hidden="true" />In group</button>
             <Link className={styles.actionPill} href={`/group?id=${state.groupId}`}><UsersRound size={12} aria-hidden="true" />Open group</Link>
           </> : <>
-            <button className={`${styles.actionPill} ${state.interested ? styles.actionSelected : ""}`} type="button" disabled={busy} onClick={() => { const interested = !state.interested; onChange({ ...state, interested, discoverable: interested }); }}><Heart size={12} fill={state.interested ? "currentColor" : "none"} aria-hidden="true" />Interested</button>
+            <button className={`${styles.actionPill} ${state.interested ? styles.actionSelected : ""}`} type="button" disabled={busy} onClick={() => { const interested = !state.interested; onChange({ ...state, interested, discoverable: false }); }}><Heart size={12} fill={state.interested ? "currentColor" : "none"} aria-hidden="true" />Interested</button>
             <button className={styles.actionPill} type="button" disabled={busy} onClick={onFindCompany}><UsersRound size={12} aria-hidden="true" />Find company</button>
           </>}
         </div>
@@ -142,7 +142,7 @@ export default function FeedPage() {
             <section className={styles.eventList} aria-label="Nearby activities">
               {filteredActivities.map((activity) => {
                 const state = states[activity.id] ?? { interested: false, saved: false, discoverable: false };
-                return <EventRow activity={activity} state={state} busy={busyId === activity.id} key={activity.id} onChange={(next) => void updateState(activity.id, next)} onFindCompany={() => void updateState(activity.id, { ...state, interested: true, discoverable: true }, true)} />;
+                return <EventRow activity={activity} state={state} busy={busyId === activity.id} key={activity.id} onChange={(next) => void updateState(activity.id, next)} onFindCompany={() => router.push(`/activity?id=${activity.id}&company=1`)} />;
               })}
             </section>
           ) : activities.length && selectedFilters.length ? (

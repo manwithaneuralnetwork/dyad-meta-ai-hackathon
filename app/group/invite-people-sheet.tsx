@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Check, Plus, UserRound, X } from "lucide-react";
 import styles from "../dyad.module.css";
-import { listDiscoverableProfiles, type ActivityRecord, type PublicProfile, type Viewer } from "@/lib/activity-data";
+import { type ActivityRecord, type PublicProfile, type Viewer } from "@/lib/activity-data";
+import { listFriends } from "@/lib/friend-data";
 import { inviteMoreToGroup } from "@/lib/group-data";
 import { toggleInviteSelection } from "@/lib/group-rules";
 
@@ -27,7 +28,7 @@ export default function InvitePeopleSheet({ activity, groupId, memberIds, onClos
     if (!open) return;
     setLoading(true);
     setError("");
-    listDiscoverableProfiles(activity.id, viewer)
+    listFriends(viewer)
       .then((profiles) => setPeople(profiles.filter((profile) => !memberIds.includes(profile.id))))
       .catch(() => setError("We couldn’t load more people right now."))
       .finally(() => setLoading(false));
@@ -56,11 +57,11 @@ export default function InvitePeopleSheet({ activity, groupId, memberIds, onClos
     <section className={styles.companySheet} role="dialog" aria-modal="true" aria-labelledby="invite-people-title">
       <div className={styles.sheetHandle} />
       <header className={styles.sheetHeader}><div><p>{activity.title}</p><h2 id="invite-people-title">Invite more people</h2></div><button className={styles.sheetClose} type="button" aria-label="Close" onClick={onClose}><X size={18} /></button></header>
-      <p className={styles.selectionHint}>Add people who are currently Interested and looking for company. A group can have up to 11 people total.</p>
+      <p className={styles.selectionHint}>Invite accepted Friends to this plan. A group can have up to 11 people total.</p>
       {error ? <p className={styles.pageError} role="alert">{error}</p> : null}
       <div className={styles.peopleList}>
-        {loading ? <p className={styles.peopleEmpty}>Looking for people…</p> : null}
-        {!loading && !people.length ? <p className={styles.peopleEmpty}>No additional Interested people are available right now.</p> : null}
+        {loading ? <p className={styles.peopleEmpty}>Loading Friends…</p> : null}
+        {!loading && !people.length ? <p className={styles.peopleEmpty}>No additional Friends are available to invite.</p> : null}
         {people.map((person) => <div className={styles.personOption} key={person.id}>
           <Link className={styles.personProfileLink} href={`/profile?person=${person.id}`}><span className={`${styles.personAvatar} ${styles.avatar_aqua}`}><UserRound size={20} /></span><span className={styles.personCopy}><span className={styles.personNameLine}><strong className={styles.personName}>{person.display_name || "Dyad member"}</strong><span className={styles.attendanceBadge}>{person.attended_count} attended</span></span>{person.one_liner ? <span className={styles.personIntro}>“{person.one_liner}”</span> : null}</span></Link>
           <label className={styles.checkboxLabel}><input type="checkbox" checked={selected.includes(person.id)} onChange={() => setSelected((current) => toggleInviteSelection(current, person.id))} aria-label={`Invite ${person.display_name || "this member"}`} /><span className={styles.checkboxMark}><Check size={14} /></span></label>
