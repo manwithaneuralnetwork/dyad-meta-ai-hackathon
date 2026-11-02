@@ -148,6 +148,27 @@
 .activityAction { display: inline-flex; min-height: 46px; align-items: center; justify-content: center; gap: 7px; padding: 0 15px; border: 1px solid var(--dyad-border); border-radius: 999px; background: white; font-size: 13px; font-weight: 780; }
 .activityActionDark { border-color: var(--dyad-ink); background: var(--dyad-ink); color: white; }
 .interestNotice { margin: 0 4px 20px; color: var(--dyad-aqua-deep); font-size: 11px; font-weight: 700; line-height: 1.4; text-align: center; }
+.matchProgressCard { position: relative; overflow: hidden; margin: 0 0 22px; padding: 16px; border: 1px solid color-mix(in srgb, var(--dyad-aqua-deep) 35%, var(--dyad-border)); border-radius: 18px; background: color-mix(in srgb, var(--dyad-aqua) 8%, white); }
+.matchProgressCard::after { content: ""; position: absolute; right: -35px; top: -44px; width: 110px; height: 110px; border: 18px solid color-mix(in srgb, var(--dyad-aqua) 28%, transparent); border-radius: 50%; pointer-events: none; }
+.matchProgressReady { border-color: var(--dyad-aqua-deep); background: color-mix(in srgb, var(--dyad-aqua) 15%, white); }
+.matchProgressHeader { position: relative; z-index: 1; display: grid; grid-template-columns: 38px minmax(0,1fr) auto; align-items: center; gap: 10px; }
+.matchProgressOrb { position: relative; display: grid; width: 38px; height: 38px; place-items: center; border-radius: 50%; background: var(--dyad-ink); color: var(--dyad-aqua); }
+.matchProgressOrb::after { content: ""; position: absolute; inset: -4px; border: 1px solid var(--dyad-aqua-deep); border-radius: inherit; animation: matchPulse 1.8s ease-out infinite; }
+.matchProgressHeader p { margin: 0 0 2px; color: var(--dyad-aqua-deep); font-size: 8px; font-weight: 850; letter-spacing: .65px; text-transform: uppercase; }
+.matchProgressHeader h2 { margin: 0; font-size: 17px; letter-spacing: -.55px; }
+.matchProgressLive { display: inline-flex; align-items: center; gap: 4px; padding: 5px 7px; border-radius: 999px; background: white; color: var(--dyad-aqua-deep); font-size: 8px; font-weight: 850; text-transform: uppercase; }
+.matchProgressLive > span { width: 6px; height: 6px; border-radius: 50%; background: var(--dyad-aqua-deep); animation: matchBlink 1.3s ease-in-out infinite; }
+.matchProgressCopy { position: relative; z-index: 1; margin: 13px 0; color: #59615e; font-size: 10px; line-height: 1.5; }
+.matchProgressSteps { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(3,1fr); overflow: hidden; border: 1px solid color-mix(in srgb, var(--dyad-aqua-deep) 18%, var(--dyad-border)); border-radius: 11px; background: white; }
+.matchProgressSteps > span { display: flex; min-height: 34px; align-items: center; justify-content: center; gap: 4px; padding: 5px; color: #909794; font-size: 8px; font-weight: 760; text-align: center; }
+.matchProgressSteps > span + span { border-left: 1px solid var(--dyad-border); }
+.matchProgressSteps .matchStepDone { color: var(--dyad-aqua-deep); }
+.matchProgressSteps .matchStepActive { color: var(--dyad-ink); background: color-mix(in srgb, var(--dyad-aqua) 10%, white); }
+.matchStepPulse { width: 7px; height: 7px; border-radius: 50%; background: var(--dyad-aqua-deep); box-shadow: 0 0 0 0 color-mix(in srgb, var(--dyad-aqua) 60%, transparent); animation: matchDot 1.4s ease-out infinite; }
+.matchProgressFooter { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: center; margin-top: 12px; }
+.matchProgressFooter > span { color: var(--dyad-muted); font-size: 8px; line-height: 1.35; }
+.matchProgressFooter > span strong { display: block; color: var(--dyad-ink); font-size: 12px; }
+.matchProgressFooter > button, .matchProgressFooter > a { grid-column: 1 / -1; display: inline-flex; min-height: 35px; align-items: center; justify-content: center; border: 0; border-radius: 999px; background: var(--dyad-ink); color: white; font-size: 9px; font-weight: 800; }
 .activityFacts { display: flex; flex-direction: column; margin: 0; }
 .activityFact { display: grid; grid-template-columns: 42px 1fr; gap: 12px; padding: 16px 0; border-top: 1px solid var(--dyad-border); }
 .activityFact:last-child { border-bottom: 1px solid var(--dyad-border); }
@@ -579,6 +600,12 @@
 
 @keyframes sheetFadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes sheetRise { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes matchPulse { 0% { opacity: .8; transform: scale(.9); } 70%, 100% { opacity: 0; transform: scale(1.28); } }
+@keyframes matchBlink { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+@keyframes matchDot { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--dyad-aqua) 60%, transparent); } 80%, 100% { box-shadow: 0 0 0 7px transparent; } }
+@media (prefers-reduced-motion: reduce) {
+  .matchProgressOrb::after, .matchProgressLive > span, .matchStepPulse { animation: none; }
+}
 .bottomNav { flex: 0 0 auto; display: grid; grid-template-columns: repeat(4,1fr); padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); border-top: 1px solid var(--dyad-border); background: rgba(255,255,255,.97); }
 .navItem { display: flex; min-width: 0; height: 45px; align-items: center; justify-content: center; flex-direction: column; gap: 3px; padding: 0; border: 0; background: transparent; color: #7d8582; font-size: 10px; font-weight: 700; cursor: default; }
 .navIconWrap { position: relative; display: grid; place-items: center; }

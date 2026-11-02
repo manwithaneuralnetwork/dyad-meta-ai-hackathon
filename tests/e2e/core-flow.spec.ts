@@ -66,16 +66,16 @@ test("demo onboarding reaches Discovery without creating an account", async ({ p
   const firstActivity = page.getByRole("region", { name: "Nearby activities" }).locator("article").first();
   const firstTitle = await firstActivity.getByRole("heading").innerText();
   await firstActivity.getByRole("button", { name: "Interested" }).click();
-  await firstActivity.getByRole("button", { name: `Save ${firstTitle}` }).click();
+  await expect(firstActivity.getByRole("button", { name: /^Save / })).toHaveCount(0);
 
   await page.getByRole("link", { name: "My Activities" }).click();
   await expect(page.getByRole("heading", { name: "Your groups" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Saved", exact: true })).toHaveCount(0);
   await expect(page.getByText(firstTitle, { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Go to Discovery" }).first()).toHaveAttribute("href", "/feed");
 
   await page.getByRole("searchbox", { name: "Search your activities" }).fill("no-such-dyad-activity");
   await expect(page.getByText("No interested activities match your search.")).toBeVisible();
-  await expect(page.getByText("No saved activities match your search.")).toBeVisible();
 
   await page.getByRole("link", { name: "Chats" }).click();
   await expect(page.getByRole("heading", { name: "No conversations yet" })).toBeVisible();

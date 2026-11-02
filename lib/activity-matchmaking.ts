@@ -1,4 +1,8 @@
+import type { Database } from "@/lib/database.types";
+
 export type MatchmakingPreference = { min: number; max: number };
+export type ActivityMatchmakingEntry = Database["public"]["Tables"]["activity_matchmaking"]["Row"];
+export type ActivityMatchmakingStatus = { entry: ActivityMatchmakingEntry | null; waitingCount: number };
 
 export type MatchmakingCandidate = {
   userId: string;

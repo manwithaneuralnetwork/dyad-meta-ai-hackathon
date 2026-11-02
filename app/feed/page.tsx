@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bookmark, Heart, MapPin, RefreshCw, UsersRound } from "lucide-react";
+import { Heart, MapPin, RefreshCw, UsersRound } from "lucide-react";
 import styles from "../dyad.module.css";
 import EventMenu from "./event-menu";
 import { AppHeader, BottomNavigation } from "../app-navigation";
@@ -57,7 +57,6 @@ function EventRow({
             <button className={styles.actionPill} type="button" disabled={busy} onClick={onFindCompany}><UsersRound size={12} aria-hidden="true" />Find company</button>
           </>}
         </div>
-        <button className={`${styles.iconButton} ${styles.saveButton} ${state.saved ? styles.saveSelected : ""}`} type="button" disabled={busy} aria-label={`${state.saved ? "Unsave" : "Save"} ${activity.title}`} onClick={() => onChange({ ...state, saved: !state.saved })}><Bookmark size={15} fill={state.saved ? "currentColor" : "none"} /></button>
       </div>
     </article>
   );

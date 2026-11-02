@@ -6,26 +6,40 @@ import { Check, Clock3, Plus, Sparkles, UserRound, UsersRound, X } from "lucide-
 import Link from "next/link";
 import styles from "../dyad.module.css";
 import { type ActivityRecord, type PublicProfile, type Viewer } from "@/lib/activity-data";
-import { MATCHMAKING_PRESETS } from "@/lib/activity-matchmaking";
-import type { Database } from "@/lib/database.types";
+import { MATCHMAKING_PRESETS, type ActivityMatchmakingEntry, type ActivityMatchmakingStatus } from "@/lib/activity-matchmaking";
 import { listFriends } from "@/lib/friend-data";
 import { createActivityGroup } from "@/lib/group-data";
 import { toggleInviteSelection } from "@/lib/group-rules";
 
-type MatchEntry = Database["public"]["Tables"]["activity_matchmaking"]["Row"];
-
-export default function FindCompanySheet({ activity, viewer, initiallyOpen = false }: { activity: ActivityRecord; viewer: Viewer; initiallyOpen?: boolean }) {
+export default function FindCompanySheet({ activity, viewer, initiallyOpen = false, openSignal = 0, status, onStatusChange }: {
+  activity: ActivityRecord;
+  viewer: Viewer;
+  initiallyOpen?: boolean;
+  openSignal?: number;
+  status?: ActivityMatchmakingStatus | null;
+  onStatusChange?: (status: ActivityMatchmakingStatus) => void;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(initiallyOpen);
   const [friends, setFriends] = useState<PublicProfile[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [preferenceIndex, setPreferenceIndex] = useState(1);
-  const [matchEntry, setMatchEntry] = useState<MatchEntry | null>(null);
-  const [waitingCount, setWaitingCount] = useState(0);
+  const [matchEntry, setMatchEntry] = useState<ActivityMatchmakingEntry | null>(status?.entry ?? null);
+  const [waitingCount, setWaitingCount] = useState(status?.waitingCount ?? 0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState<"matching" | "friends" | "cancel" | null>(null);
+
+  useEffect(() => {
+    if (openSignal > 0) setOpen(true);
+  }, [openSignal]);
+
+  useEffect(() => {
+    if (!status) return;
+    setMatchEntry(status.entry);
+    setWaitingCount(status.waitingCount);
+  }, [status]);
 
   useEffect(() => {
     if (!open) return;
@@ -53,7 +67,7 @@ export default function FindCompanySheet({ activity, viewer, initiallyOpen = fal
     Promise.all([
       listFriends(viewer),
       fetch(`/api/activities/${activity.id}/matchmaking`, { cache: "no-store" }).then(async (response) => {
-        const payload = await response.json() as { entry?: MatchEntry | null; waitingCount?: number; error?: string };
+        const payload = await response.json() as { entry?: ActivityMatchmakingEntry | null; waitingCount?: number; error?: string };
         if (!response.ok) throw new Error(payload.error || "Matchmaking status couldn’t be loaded.");
         return payload;
       }),
@@ -63,6 +77,7 @@ export default function FindCompanySheet({ activity, viewer, initiallyOpen = fal
         setFriends(nextFriends);
         setMatchEntry(status.entry ?? null);
         setWaitingCount(status.waitingCount ?? 0);
+        onStatusChange?.({ entry: status.entry ?? null, waitingCount: status.waitingCount ?? 0 });
         if (status.entry) {
           const index = MATCHMAKING_PRESETS.findIndex((preset) => preset.min === status.entry?.min_group_size && preset.max === status.entry?.max_group_size);
           if (index >= 0) setPreferenceIndex(index);
@@ -71,7 +86,7 @@ export default function FindCompanySheet({ activity, viewer, initiallyOpen = fal
       .catch((loadError) => { if (active) setError(loadError instanceof Error ? loadError.message : "Company options couldn’t be loaded."); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [activity.id, open, viewer]);
+  }, [activity.id, onStatusChange, open, viewer]);
 
   async function joinMatchmaking() {
     if (viewer.kind !== "real") {
@@ -95,8 +110,11 @@ export default function FindCompanySheet({ activity, viewer, initiallyOpen = fal
         router.push(`/group?id=${payload.groupId}`);
         return;
       }
-      setWaitingCount(payload.waitingCount ?? waitingCount + 1);
-      setMatchEntry({ user_id: viewer.userId, activity_id: activity.id, min_group_size: preference.min, max_group_size: preference.max, status: "waiting", group_id: null, match_reason: "", created_at: matchEntry?.created_at ?? new Date().toISOString(), updated_at: new Date().toISOString() });
+      const nextWaitingCount = payload.waitingCount ?? waitingCount + 1;
+      const nextEntry: ActivityMatchmakingEntry = { user_id: viewer.userId, activity_id: activity.id, min_group_size: preference.min, max_group_size: preference.max, status: "waiting", group_id: null, match_reason: "", created_at: matchEntry?.created_at ?? new Date().toISOString(), updated_at: new Date().toISOString() };
+      setWaitingCount(nextWaitingCount);
+      setMatchEntry(nextEntry);
+      onStatusChange?.({ entry: nextEntry, waitingCount: nextWaitingCount });
       setNotice("You’re in the matching pool. We’ll send an invitation as soon as a compatible group is ready.");
     } catch (matchError) {
       setError(matchError instanceof Error ? matchError.message : "You couldn’t join matchmaking.");
@@ -112,8 +130,11 @@ export default function FindCompanySheet({ activity, viewer, initiallyOpen = fal
     try {
       const response = await fetch(`/api/activities/${activity.id}/matchmaking`, { method: "DELETE" });
       if (!response.ok) throw new Error("Matchmaking couldn’t be paused.");
-      setMatchEntry((current) => current ? { ...current, status: "cancelled", group_id: null } : null);
-      setWaitingCount((current) => Math.max(0, current - 1));
+      const nextEntry = matchEntry ? { ...matchEntry, status: "cancelled" as const, group_id: null } : null;
+      const nextWaitingCount = Math.max(0, waitingCount - 1);
+      setMatchEntry(nextEntry);
+      setWaitingCount(nextWaitingCount);
+      onStatusChange?.({ entry: nextEntry, waitingCount: nextWaitingCount });
       setNotice("You left the matching pool for this activity.");
     } catch (cancelError) {
       setError(cancelError instanceof Error ? cancelError.message : "Matchmaking couldn’t be paused.");
@@ -136,11 +157,14 @@ export default function FindCompanySheet({ activity, viewer, initiallyOpen = fal
   }
 
   const waiting = matchEntry?.status === "waiting";
+  const matchedGroupId = matchEntry?.status === "matched" ? matchEntry.group_id : null;
   const preference = MATCHMAKING_PRESETS[preferenceIndex];
 
   return (
     <>
-      <button className={`${styles.activityAction} ${styles.activityActionDark}`} type="button" onClick={() => setOpen(true)}><UsersRound size={16} />Find company</button>
+      {matchedGroupId
+        ? <Link className={`${styles.activityAction} ${styles.activityActionDark}`} href={`/group?id=${matchedGroupId}`}><UsersRound size={16} />View match</Link>
+        : <button className={`${styles.activityAction} ${styles.activityActionDark}`} type="button" onClick={() => setOpen(true)}><UsersRound size={16} />{waiting ? "Review match" : "Find company"}</button>}
       {open && (
         <div className={styles.sheetLayer}>
           <button className={styles.sheetScrim} type="button" aria-label="Close find company" onClick={() => setOpen(false)} />

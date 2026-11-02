@@ -54,6 +54,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const existingGroupId = await findExistingGroup(admin, userId, activityId);
   if (existingGroupId) return NextResponse.json({ matched: true, groupId: existingGroupId, reason: "You already have a group for this activity." });
+  const { data: existingMatch } = await admin.from("activity_matchmaking").select("status, group_id, match_reason").eq("user_id", userId).eq("activity_id", activityId).maybeSingle();
+  if (existingMatch?.status === "matched" && existingMatch.group_id) {
+    return NextResponse.json({ matched: true, groupId: existingMatch.group_id, reason: existingMatch.match_reason || "Muse already found your group." });
+  }
 
   const now = new Date().toISOString();
   const { error: queueError } = await admin.from("activity_matchmaking").upsert({

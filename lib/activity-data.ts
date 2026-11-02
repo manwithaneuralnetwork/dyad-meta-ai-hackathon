@@ -17,7 +17,14 @@ const EMPTY_STATE: ActivityUiState = { interested: false, saved: false, discover
 function readDemoStates(): Record<string, ActivityUiState> {
   try {
     const value = window.sessionStorage.getItem(DEMO_ACTIVITY_STATE_KEY);
-    return value ? JSON.parse(value) as Record<string, ActivityUiState> : {};
+    if (!value) return {};
+    const stored = JSON.parse(value) as Record<string, ActivityUiState>;
+    return Object.fromEntries(Object.entries(stored).map(([activityId, state]) => [activityId, {
+      ...state,
+      interested: state.interested || state.saved,
+      saved: false,
+      discoverable: false,
+    }]));
   } catch {
     window.sessionStorage.removeItem(DEMO_ACTIVITY_STATE_KEY);
     return {};
@@ -130,7 +137,7 @@ export async function loadActivityStates(activityIds: string[], viewer: Viewer):
     : { data: [], error: null };
   if (groupsError) throw groupsError;
 
-  for (const row of stateResult.data) states[row.activity_id] = { interested: row.interested, saved: row.saved, discoverable: false };
+  for (const row of stateResult.data) states[row.activity_id] = { interested: row.interested || row.saved, saved: false, discoverable: false };
   for (const row of discoveryResult.data) states[row.activity_id] = { ...(states[row.activity_id] ?? EMPTY_STATE), discoverable: true };
   for (const group of groups) states[group.activity_id] = { ...(states[group.activity_id] ?? EMPTY_STATE), interested: false, discoverable: false, groupId: group.id };
   return states;
@@ -138,8 +145,8 @@ export async function loadActivityStates(activityIds: string[], viewer: Viewer):
 
 export async function saveActivityState(activityId: string, next: ActivityUiState, viewer: Viewer) {
   const normalized = next.groupId
-    ? { ...next, interested: false, discoverable: false }
-    : next.interested ? next : { ...next, discoverable: false };
+    ? { ...next, interested: false, saved: false, discoverable: false }
+    : { ...next, interested: next.interested || next.saved, saved: false, discoverable: false };
   if (viewer.kind === "anonymous") throw new Error("Choose real or demo mode before saving activities.");
 
   if (viewer.kind === "demo") {

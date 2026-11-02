@@ -17,7 +17,7 @@ import {
 } from "@/lib/activity-data";
 import { listMyGroups, type GroupSummary } from "@/lib/group-data";
 
-type ActivityKind = "group" | "interested" | "saved" | "past";
+type ActivityKind = "group" | "interested" | "past";
 
 function ActivityRow({ activity, kind, groupId }: { activity: ActivityRecord; kind: ActivityKind; groupId?: string }) {
   return (
@@ -75,7 +75,7 @@ export default function MyActivitiesPage() {
     const matches = (activity: ActivityRecord) => !query.trim() || `${activity.title} ${activity.venue_name} ${activity.address} ${activity.city}`.toLowerCase().includes(query.trim().toLowerCase());
     const tracked = activities.filter((activity) => {
       const state = states[activity.id];
-      return state && (state.interested || state.saved) && matches(activity);
+      return state?.interested && matches(activity);
     });
     const matchingGroups = groups.filter((group) => matches(group.activity));
     const activeGroups = matchingGroups.filter((group) => !activityHasEnded(group.activity, now));
@@ -85,7 +85,6 @@ export default function MyActivitiesPage() {
     return {
       groups: activeGroups,
       interested: tracked.filter((activity) => !activityHasEnded(activity, now) && states[activity.id]?.interested).sort((a, b) => +new Date(a.starts_at) - +new Date(b.starts_at)),
-      saved: tracked.filter((activity) => !activityHasEnded(activity, now) && states[activity.id]?.saved).sort((a, b) => +new Date(a.starts_at) - +new Date(b.starts_at)),
       past: [...pastById.values()].sort((a, b) => +new Date(b.ends_at || b.starts_at) - +new Date(a.ends_at || a.starts_at)),
     };
   }, [activities, groups, query, states]);
@@ -102,7 +101,6 @@ export default function MyActivitiesPage() {
             <>
               <ActivitySection title="Your groups" items={lists.groups.map((group) => group.activity)} groups={lists.groups} kind="group" emptyText="No upcoming activity groups. Find company on an activity to start one." />
               <ActivitySection title="Interested" items={lists.interested} kind="interested" emptyText={query ? "No interested activities match your search." : "You haven’t marked any upcoming activities as interested."} />
-              <ActivitySection title="Saved" items={lists.saved} kind="saved" emptyText={query ? "No saved activities match your search." : "Save an activity to keep it handy without making yourself visible."} />
               <ActivitySection title="Past" items={lists.past} kind="past" emptyText={query ? "No past activities match your search." : "Past activities you tracked will appear here."} />
             </>
           )}
