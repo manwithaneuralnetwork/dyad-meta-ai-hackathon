@@ -6,9 +6,8 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const preferenceSchema = z.object({
-  minGroupSize: z.number().int().min(2).max(6),
-  maxGroupSize: z.number().int().min(2).max(6),
-}).refine((value) => value.minGroupSize <= value.maxGroupSize, "Invalid group-size range");
+  acceptedGroupSizes: z.array(z.number().int().min(2).max(6)).min(1).max(5),
+}).transform((value) => ({ acceptedGroupSizes: [...new Set(value.acceptedGroupSizes)].sort((a, b) => a - b) }));
 
 const museChoiceSchema = z.object({
   selectedUserIds: z.array(z.string().uuid()).min(1).max(5),
@@ -48,7 +47,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const { data: activity, error: activityError } = await admin.from("activities").select("id, title, topics, starts_at, status").eq("id", activityId).maybeSingle();
   if (activityError || !activity) return NextResponse.json({ error: "Activity not found" }, { status: 404 });
-  if (activity.status !== "published" || new Date(activity.starts_at).getTime() <= Date.now()) {
+  const matchingClosesAt = new Date(activity.starts_at).getTime() - 4 * 60 * 60 * 1000;
+  if (activity.status !== "published" || matchingClosesAt <= Date.now()) {
     return NextResponse.json({ error: "Matching has closed for this activity" }, { status: 409 });
   }
 
@@ -60,11 +60,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   const now = new Date().toISOString();
+  const acceptedGroupSizes = input.data.acceptedGroupSizes;
   const { error: queueError } = await admin.from("activity_matchmaking").upsert({
     user_id: userId,
     activity_id: activityId,
-    min_group_size: input.data.minGroupSize,
-    max_group_size: input.data.maxGroupSize,
+    min_group_size: acceptedGroupSizes[0],
+    max_group_size: acceptedGroupSizes[acceptedGroupSizes.length - 1],
+    accepted_group_sizes: acceptedGroupSizes,
     status: "waiting",
     group_id: null,
     match_reason: "",
@@ -89,12 +91,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     userId: entry.user_id,
     minGroupSize: entry.min_group_size,
     maxGroupSize: entry.max_group_size,
+    acceptedGroupSizes: entry.accepted_group_sizes?.length
+      ? entry.accepted_group_sizes
+      : Array.from({ length: entry.max_group_size - entry.min_group_size + 1 }, (_, index) => entry.min_group_size + index),
     interests: interestsByUser.get(entry.user_id) ?? [],
     oneLiner: profileById.get(entry.user_id)?.one_liner ?? "",
     attendedCount: profileById.get(entry.user_id)?.attended_count ?? 0,
     createdAt: entry.created_at,
   }));
-  const pool = findMatchablePool(userId, { min: input.data.minGroupSize, max: input.data.maxGroupSize }, candidates);
+  const pool = findMatchablePool(userId, { sizes: acceptedGroupSizes }, candidates);
   if (!pool) return NextResponse.json({ matched: false, waiting: true, waitingCount: queue.length });
 
   const viewerInterests = interestsByUser.get(userId) ?? [];

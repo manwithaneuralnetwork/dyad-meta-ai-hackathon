@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, CalendarDays, Check, Clock3, Heart, MapPin, RefreshCw, Sparkles, Ticket, UsersRound } from "lucide-react";
 import styles from "../dyad.module.css";
 import FindCompanySheet from "./find-company-sheet";
 import SmartBackButton from "../smart-back-button";
+import UndoToast from "../undo-toast";
 import {
   activityLocation,
   formatActivityDate,
@@ -17,7 +18,7 @@ import {
   type ActivityUiState,
   type Viewer,
 } from "@/lib/activity-data";
-import type { ActivityMatchmakingStatus } from "@/lib/activity-matchmaking";
+import { acceptedSizes, formatGroupSizes, type ActivityMatchmakingStatus } from "@/lib/activity-matchmaking";
 
 const emptyUiState: ActivityUiState = { interested: false, saved: false, discoverable: false };
 
@@ -30,6 +31,9 @@ export default function ActivityClient({ activityId, openCompanyInitially }: { a
   const [error, setError] = useState("");
   const [matchStatus, setMatchStatus] = useState<ActivityMatchmakingStatus | null>(null);
   const [sheetOpenSignal, setSheetOpenSignal] = useState(0);
+  const [showUndo, setShowUndo] = useState(false);
+  const [matchFound, setMatchFound] = useState(false);
+  const previousMatchState = useRef<string | null>(null);
 
   const load = useCallback(async () => {
     if (!activityId) return;
@@ -65,7 +69,11 @@ export default function ActivityClient({ activityId, openCompanyInitially }: { a
         const response = await fetch(`/api/activities/${activityId}/matchmaking`, { cache: "no-store" });
         if (!response.ok) return;
         const payload = await response.json() as ActivityMatchmakingStatus;
-        if (active) setMatchStatus(payload);
+        if (active) {
+          if (previousMatchState.current === "waiting" && payload.entry?.status === "matched") setMatchFound(true);
+          previousMatchState.current = payload.entry?.status ?? null;
+          setMatchStatus(payload);
+        }
       } catch {
         // The activity page stays usable if a background status refresh fails.
       }
@@ -107,8 +115,16 @@ export default function ActivityClient({ activityId, openCompanyInitially }: { a
 
   async function toggleInterested() {
     const interested = !state.interested;
-    await persist({ ...state, interested, discoverable: false });
+    const saved = await persist({ ...state, interested, discoverable: false });
+    if (saved && interested) setShowUndo(true);
   }
+
+  async function undoInterested() {
+    setShowUndo(false);
+    await persist({ ...state, interested: false, discoverable: false });
+  }
+
+  const matchingDeadline = new Date(new Date(activity.starts_at).getTime() - 4 * 60 * 60 * 1000);
 
   return (
     <main className={styles.pageBackdrop}>
@@ -144,19 +160,21 @@ export default function ActivityClient({ activityId, openCompanyInitially }: { a
                 <div><p>Muse matchmaking</p><h2>{matchStatus.entry.status === "matched" ? "Your match is ready" : "Finding your group"}</h2></div>
                 <span className={styles.matchProgressLive}><span />{matchStatus.entry.status === "matched" ? "Ready" : "Live"}</span>
               </div>
-              <p className={styles.matchProgressCopy}>{matchStatus.entry.status === "matched" ? "Muse found a compatible group. Open the invitation to meet them and decide whether to join." : "Muse is watching for compatible group sizes, then comparing shared interests before invitations go out."}</p>
+              <p className={styles.matchProgressCopy}>{matchStatus.entry.status === "matched" ? (matchStatus.entry.match_reason || "Muse found a compatible group. Open the invitation to meet them and decide whether to join.") : "Muse is watching for compatible group sizes, then comparing shared interests before invitations go out."}</p>
               <div className={styles.matchProgressSteps}>
                 <span className={styles.matchStepDone}><Check size={11} />You’re in</span>
                 <span className={matchStatus.entry.status === "matched" ? styles.matchStepDone : styles.matchStepActive}>{matchStatus.entry.status === "matched" ? <Check size={11} /> : <span className={styles.matchStepPulse} />}Fit compared</span>
                 <span className={matchStatus.entry.status === "matched" ? styles.matchStepDone : ""}>{matchStatus.entry.status === "matched" ? <Check size={11} /> : <Clock3 size={11} />}Invitation</span>
               </div>
               <div className={styles.matchProgressFooter}>
-                <span><strong>{matchStatus.entry.min_group_size === matchStatus.entry.max_group_size ? matchStatus.entry.min_group_size : `${matchStatus.entry.min_group_size}–${matchStatus.entry.max_group_size}`}</strong> preferred group size</span>
+                <span><strong>{formatGroupSizes(acceptedSizes(matchStatus.entry)).replace(" people", "")}</strong> accepted group sizes</span>
                 {matchStatus.entry.status === "waiting" ? <span><strong>{matchStatus.waitingCount}</strong> {matchStatus.waitingCount === 1 ? "person" : "people"} in the pool</span> : <span><strong>1</strong> invitation ready</span>}
+                {matchStatus.entry.status === "waiting" ? <span className={styles.matchDeadline}>Matching until {new Intl.DateTimeFormat("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" }).format(matchingDeadline)}</span> : null}
                 {matchStatus.entry.status === "matched" && matchStatus.entry.group_id
                   ? <Link href={`/group?id=${matchStatus.entry.group_id}`}>Open invitation</Link>
                   : <button type="button" onClick={() => setSheetOpenSignal((value) => value + 1)}>Review preferences</button>}
               </div>
+              {matchStatus.entry.status === "waiting" && matchStatus.waitingCount < 3 ? <div className={styles.matchRecovery}><p>A wider size range may find company sooner. You can also make a group with Friends.</p><button type="button" onClick={() => setSheetOpenSignal((value) => value + 1)}>Adjust or invite Friends</button></div> : null}
             </section>
           ) : null}
 
@@ -166,6 +184,8 @@ export default function ActivityClient({ activityId, openCompanyInitially }: { a
           <section className={styles.activitySection}><h2>Hosted by</h2><div className={styles.hostCard}>{isTicketmaster ? <img className={styles.hostLogo} src="/ticketmaster-logo.png" alt="Ticketmaster logo" /> : <span className={styles.hostMark}>{activity.source_name.slice(0, 2).toUpperCase()}</span>}<div><strong>{activity.source_name}</strong>{activity.source_url ? <a className={styles.hostLink} href={activity.source_url} target="_blank" rel="noreferrer">View official listing <ArrowRight size={13} aria-hidden="true" /></a> : <span>{activity.source_type === "official" ? "Official activity" : "Community activity"}</span>}</div></div></section>
         </div>
       </article>
+      {showUndo ? <UndoToast message="Added to My Activities" onDismiss={() => setShowUndo(false)} onUndo={() => void undoInterested()} /> : null}
+      {matchFound && matchStatus?.entry?.group_id ? <div className={styles.matchFoundBanner} role="alert"><span><Sparkles size={15} /><strong>Muse found your group</strong></span><Link href={`/group?id=${matchStatus.entry.group_id}`}>View invitation</Link><button type="button" aria-label="Dismiss" onClick={() => setMatchFound(false)}>×</button></div> : null}
     </main>
   );
 }

@@ -21,6 +21,8 @@ export type GroupDetail = {
   activity: ActivityRecord;
   createdAt: string;
   createdBy: string;
+  creationMode: "manual" | "matchmaking";
+  matchReason: string;
   accepted: boolean;
   members: Array<{ profile: PublicProfile; joinedAt: string; role: string }>;
   acceptedInvites: Array<{ profile: PublicProfile; acceptedAt: string }>;
@@ -31,7 +33,7 @@ export type GroupDetail = {
 
 export type InboxNotification = {
   id: string;
-  kind: "group_invite" | "invite_response" | "friend_request" | "friend_response";
+  kind: "group_invite" | "invite_response" | "friend_request" | "friend_response" | "match_ready";
   href: string;
   createdAt: string;
   title: string;
@@ -112,22 +114,24 @@ export async function listInboxNotifications(viewer: Viewer): Promise<InboxNotif
   const supabase = createSupabaseBrowserClient();
   if (!supabase) return [];
 
-  const [inviteResult, friendshipResult, readsResult] = await Promise.all([
+  const [inviteResult, friendshipResult, matchResult, readsResult] = await Promise.all([
     supabase.from("group_invites").select("*").or(`invitee_id.eq.${viewer.userId},inviter_id.eq.${viewer.userId}`).order("created_at", { ascending: false }),
     supabase.from("friendships").select("*").or(`requester_id.eq.${viewer.userId},addressee_id.eq.${viewer.userId}`).order("created_at", { ascending: false }),
+    supabase.from("activity_matchmaking").select("activity_id, group_id, match_reason, updated_at").eq("user_id", viewer.userId).eq("status", "matched").not("group_id", "is", null),
     supabase.from("notification_reads").select("notification_key").eq("user_id", viewer.userId),
   ]);
   const { data: invites, error: invitesError } = inviteResult;
   if (invitesError) throw invitesError;
   if (friendshipResult.error) throw friendshipResult.error;
+  if (matchResult.error) throw matchResult.error;
   if (readsResult.error) throw readsResult.error;
 
   const relevantInvites = invites.filter((invite) =>
     (invite.invitee_id === viewer.userId && invite.status === "pending")
     || (invite.inviter_id === viewer.userId && invite.status !== "pending")
   );
-  const groupIds = [...new Set(relevantInvites.map((invite) => invite.group_id))];
-  const { data: groups, error: groupsError } = groupIds.length ? await supabase.from("groups").select("id, activity_id").in("id", groupIds) : { data: [], error: null };
+  const groupIds = [...new Set([...relevantInvites.map((invite) => invite.group_id), ...matchResult.data.flatMap((match) => match.group_id ? [match.group_id] : [])])];
+  const { data: groups, error: groupsError } = groupIds.length ? await supabase.from("groups").select("id, activity_id, created_by").in("id", groupIds) : { data: [], error: null };
   if (groupsError) throw groupsError;
   const activityIds = [...new Set(groups.map((group) => group.activity_id))];
   const relevantFriendships = friendshipResult.data.filter((friendship) =>
@@ -184,7 +188,22 @@ export async function listInboxNotifications(viewer: Viewer): Promise<InboxNotif
       unread: !readKeys.has(notificationKey(kind, friendship.id)),
     };
   });
-  return [...groupNotifications, ...friendNotifications].sort((left, right) => +new Date(right.createdAt) - +new Date(left.createdAt));
+  const matchNotifications: InboxNotification[] = matchResult.data.flatMap((match) => {
+    const group = match.group_id ? groupById.get(match.group_id) : undefined;
+    const activity = activityById.get(match.activity_id);
+    if (!group || group.created_by !== viewer.userId || !activity || !match.group_id) return [];
+    const id = `${match.activity_id}-${match.group_id}`;
+    return [{
+      id,
+      kind: "match_ready" as const,
+      href: `/group?id=${match.group_id}`,
+      createdAt: match.updated_at,
+      title: "Muse found your group",
+      body: match.match_reason || `Your match for ${activity.title} is ready.`,
+      unread: !readKeys.has(notificationKey("match_ready", id)),
+    }];
+  });
+  return [...groupNotifications, ...friendNotifications, ...matchNotifications].sort((left, right) => +new Date(right.createdAt) - +new Date(left.createdAt));
 }
 
 function notificationKey(kind: InboxNotification["kind"], id: string) {
@@ -256,6 +275,8 @@ export async function getGroupDetail(groupId: string, viewer: Viewer): Promise<G
     activity,
     createdAt: group.created_at,
     createdBy: group.created_by,
+    creationMode: group.creation_mode,
+    matchReason: group.match_reason,
     accepted,
     members: membersResult.data.flatMap((row) => {
       const profile = profileById.get(row.user_id);
@@ -344,6 +365,7 @@ export function subscribeToNotificationChanges(onChange: () => void): RealtimeCh
     .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, onChange)
     .on("postgres_changes", { event: "*", schema: "public", table: "group_invites" }, onChange)
     .on("postgres_changes", { event: "*", schema: "public", table: "friendships" }, onChange)
+    .on("postgres_changes", { event: "*", schema: "public", table: "activity_matchmaking" }, onChange)
     .subscribe();
 }
 

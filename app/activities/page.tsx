@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { CalendarDays, ChevronRight, Compass, MessageCircle, Search } from "lucide-react";
+import { Check, ChevronRight, Compass, MessageCircle, Search, Sparkles } from "lucide-react";
 import styles from "../dyad.module.css";
 import { AppHeader, BottomNavigation } from "../app-navigation";
 import {
@@ -16,10 +16,11 @@ import {
   type ActivityUiState,
 } from "@/lib/activity-data";
 import { listMyGroups, type GroupSummary } from "@/lib/group-data";
+import { listMyMatchmaking, type ActivityMatchmakingEntry } from "@/lib/activity-matchmaking";
 
 type ActivityKind = "group" | "interested" | "past";
 
-function ActivityRow({ activity, kind, groupId }: { activity: ActivityRecord; kind: ActivityKind; groupId?: string }) {
+function ActivityRow({ activity, kind, groupId, match }: { activity: ActivityRecord; kind: ActivityKind; groupId?: string; match?: ActivityMatchmakingEntry }) {
   return (
     <Link className={`${styles.myActivityRow} ${kind === "past" ? styles.myActivityPast : ""}`} href={kind === "group" && groupId ? `/group?id=${groupId}` : `/activity?id=${activity.id}`}>
       <span className={`${styles.myActivityArt} ${!activity.image_url ? styles.jazz : ""}`} aria-hidden="true">{activity.image_url ? <img src={activity.image_url} alt="" /> : null}</span>
@@ -27,17 +28,19 @@ function ActivityRow({ activity, kind, groupId }: { activity: ActivityRecord; ki
         <span className={styles.myActivityMeta}>{kind === "group" ? <MessageCircle size={11} /> : null}{kind === "past" ? `Passed · ${formatActivityDate(activity.starts_at)}` : formatActivityDate(activity.starts_at)}</span>
         <strong>{activity.title}</strong>
         <span className={styles.myActivityDetail}>{activityLocation(activity) || activity.city}</span>
+        {match?.status === "waiting" ? <span className={styles.myActivityMatchBadge}><Sparkles size={10} />Muse is matching</span> : null}
+        {match?.status === "matched" ? <span className={`${styles.myActivityMatchBadge} ${styles.myActivityMatchReady}`}><Check size={10} />Match ready</span> : null}
       </span>
       <ChevronRight className={styles.myActivityChevron} size={18} aria-hidden="true" />
     </Link>
   );
 }
 
-function ActivitySection({ title, items, kind, emptyText, groups = [] }: { title: string; items: ActivityRecord[]; kind: ActivityKind; emptyText: string; groups?: GroupSummary[] }) {
+function ActivitySection({ title, items, kind, emptyText, groups = [], matches = {} }: { title: string; items: ActivityRecord[]; kind: ActivityKind; emptyText: string; groups?: GroupSummary[]; matches?: Record<string, ActivityMatchmakingEntry> }) {
   return (
     <section className={styles.myActivitySection}>
       <div className={styles.myActivitySectionHeading}><h2>{title}</h2><span>{items.length}</span></div>
-      {items.length ? <div className={styles.myActivityList}>{items.map((item) => <ActivityRow activity={item} kind={kind} groupId={groups.find((group) => group.activity.id === item.id)?.groupId} key={item.id} />)}</div> : (
+      {items.length ? <div className={styles.myActivityList}>{items.map((item) => <ActivityRow activity={item} kind={kind} groupId={groups.find((group) => group.activity.id === item.id)?.groupId} match={matches[item.id]} key={item.id} />)}</div> : (
         <div className={styles.sectionEmptyState}><p>{emptyText}</p><Link href="/feed"><Compass size={13} />Go to Discovery</Link></div>
       )}
     </section>
@@ -48,6 +51,7 @@ export default function MyActivitiesPage() {
   const [activities, setActivities] = useState<ActivityRecord[]>([]);
   const [states, setStates] = useState<Record<string, ActivityUiState>>({});
   const [groups, setGroups] = useState<GroupSummary[]>([]);
+  const [matches, setMatches] = useState<Record<string, ActivityMatchmakingEntry>>({});
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -57,10 +61,11 @@ export default function MyActivitiesPage() {
     setError("");
     try {
       const [catalog, viewer] = await Promise.all([listActivities({ includePast: true }), resolveViewer()]);
-      const [activityStates, myGroups] = await Promise.all([loadActivityStates(catalog.map((activity) => activity.id), viewer), listMyGroups(viewer)]);
+      const [activityStates, myGroups, myMatches] = await Promise.all([loadActivityStates(catalog.map((activity) => activity.id), viewer), listMyGroups(viewer), listMyMatchmaking(viewer)]);
       setActivities(catalog);
       setStates(activityStates);
       setGroups(myGroups.filter((group) => group.status === "member"));
+      setMatches(myMatches);
     } catch {
       setError("Your activities couldn’t be loaded right now.");
     } finally {
@@ -100,7 +105,7 @@ export default function MyActivitiesPage() {
           {loading ? <div className={styles.sectionEmptyState}><p>Loading your activities…</p></div> : (
             <>
               <ActivitySection title="Your groups" items={lists.groups.map((group) => group.activity)} groups={lists.groups} kind="group" emptyText="No upcoming activity groups. Find company on an activity to start one." />
-              <ActivitySection title="Interested" items={lists.interested} kind="interested" emptyText={query ? "No interested activities match your search." : "You haven’t marked any upcoming activities as interested."} />
+              <ActivitySection title="Interested" items={lists.interested} kind="interested" matches={matches} emptyText={query ? "No interested activities match your search." : "You haven’t marked any upcoming activities as interested."} />
               <ActivitySection title="Past" items={lists.past} kind="past" emptyText={query ? "No past activities match your search." : "Past activities you tracked will appear here."} />
             </>
           )}

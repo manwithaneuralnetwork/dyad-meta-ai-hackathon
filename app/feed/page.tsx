@@ -7,6 +7,7 @@ import { Heart, MapPin, RefreshCw, UsersRound } from "lucide-react";
 import styles from "../dyad.module.css";
 import EventMenu from "./event-menu";
 import { AppHeader, BottomNavigation } from "../app-navigation";
+import UndoToast from "../undo-toast";
 import {
   activityLocation,
   formatActivityDate,
@@ -72,6 +73,7 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [undoActivityId, setUndoActivityId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -113,6 +115,7 @@ export default function FeedPage() {
     try {
       const saved = await saveActivityState(activityId, next, viewer);
       setStates((current) => ({ ...current, [activityId]: saved }));
+      if (saved.interested && !previous.interested) setUndoActivityId(activityId);
       if (openCompany) router.push(`/activity?id=${activityId}&company=1`);
     } catch (stateError) {
       setStates((current) => ({ ...current, [activityId]: previous }));
@@ -120,6 +123,12 @@ export default function FeedPage() {
     } finally {
       setBusyId(null);
     }
+  }
+
+  function undoInterested(activityId: string) {
+    setUndoActivityId(null);
+    const current = states[activityId] ?? { interested: false, saved: false, discoverable: false };
+    void updateState(activityId, { ...current, interested: false, discoverable: false });
   }
 
   return (
@@ -161,6 +170,7 @@ export default function FeedPage() {
           )}
         </div>
         <BottomNavigation active="feed" />
+        {undoActivityId ? <UndoToast message="Added to My Activities" onDismiss={() => setUndoActivityId(null)} onUndo={() => undoInterested(undoActivityId)} /> : null}
       </div>
     </main>
   );

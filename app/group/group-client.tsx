@@ -192,6 +192,7 @@ export default function GroupClient({ groupId }: { groupId: string }) {
             <p className={styles.eyebrow}>Activity invitation</p>
             <h1>Join the group?</h1>
             <p>You’ve been invited to plan {detail.activity.title} together.</p>
+            {detail.creationMode === "matchmaking" && detail.matchReason ? <div className={styles.matchReasonCard}><Sparkles size={16} /><span><strong>Why Muse chose this group</strong>{detail.matchReason}</span></div> : null}
             {error ? <p className={styles.pageError} role="alert">{error}</p> : null}
             <div><button type="button" disabled={busy} onClick={() => void respond("declined")}>Not now</button><button type="button" disabled={busy} onClick={() => void respond("accepted")}>{busy ? "Joining…" : "Accept invite"}</button></div>
           </section>
@@ -199,6 +200,7 @@ export default function GroupClient({ groupId }: { groupId: string }) {
           <>
             <div className={styles.chatScroll} ref={scrollRef}>
               <p className={styles.chatDay}>Conversation</p>
+              {detail.creationMode === "matchmaking" && detail.matchReason ? <section className={styles.matchReasonCard}><Sparkles size={16} /><span><strong>Why this group</strong>{detail.matchReason}</span></section> : null}
               {brief ? (
                 <section className={styles.aiBriefCard} aria-live="polite">
                   <div className={styles.aiBriefHeading}><span><Sparkles size={16} /></span><div><small>Planned with Meta AI</small><h2>{brief.title}</h2></div><button type="button" onClick={() => void generateBrief()} disabled={briefLoading} aria-label="Refresh meetup brief"><RefreshCw size={15} /></button></div>

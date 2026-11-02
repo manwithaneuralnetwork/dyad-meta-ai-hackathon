@@ -80,9 +80,9 @@ export type Database = {
         Relationships: [];
       };
       activity_matchmaking: {
-        Row: { user_id: string; activity_id: string; min_group_size: number; max_group_size: number; status: "waiting" | "matched" | "cancelled"; group_id: string | null; match_reason: string; created_at: string; updated_at: string };
-        Insert: { user_id: string; activity_id: string; min_group_size: number; max_group_size: number; status?: "waiting" | "matched" | "cancelled"; group_id?: string | null; match_reason?: string; created_at?: string; updated_at?: string };
-        Update: { user_id?: string; activity_id?: string; min_group_size?: number; max_group_size?: number; status?: "waiting" | "matched" | "cancelled"; group_id?: string | null; match_reason?: string; created_at?: string; updated_at?: string };
+        Row: { user_id: string; activity_id: string; min_group_size: number; max_group_size: number; accepted_group_sizes: number[]; status: "waiting" | "matched" | "cancelled"; group_id: string | null; match_reason: string; created_at: string; updated_at: string };
+        Insert: { user_id: string; activity_id: string; min_group_size: number; max_group_size: number; accepted_group_sizes: number[]; status?: "waiting" | "matched" | "cancelled"; group_id?: string | null; match_reason?: string; created_at?: string; updated_at?: string };
+        Update: { user_id?: string; activity_id?: string; min_group_size?: number; max_group_size?: number; accepted_group_sizes?: number[]; status?: "waiting" | "matched" | "cancelled"; group_id?: string | null; match_reason?: string; created_at?: string; updated_at?: string };
         Relationships: [];
       };
       friendships: {

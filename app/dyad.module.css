@@ -224,7 +224,8 @@
 .matchmakerHeading small { display: block; margin-bottom: 2px; color: var(--dyad-aqua-deep); font-size: 8px; font-weight: 850; letter-spacing: .65px; text-transform: uppercase; }
 .matchmakerHeading h3 { margin: 0; font-size: 17px; letter-spacing: -.55px; }
 .matchmakerCard > p { margin: 12px 0 14px; color: var(--dyad-muted); font-size: 10px; line-height: 1.5; }
-.groupSizeOptions { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
+.matchmakerCard > .matchingCloses { margin: -7px 0 12px; color: var(--dyad-aqua-deep); font-size: 8px; font-weight: 780; }
+.groupSizeOptions { display: grid; grid-template-columns: repeat(5,1fr); gap: 6px; }
 .groupSizeOptions button { display: grid; gap: 3px; min-width: 0; min-height: 52px; place-content: center; padding: 6px; border: 1px solid var(--dyad-border); border-radius: 12px; background: white; color: var(--dyad-ink); text-align: center; }
 .groupSizeOptions strong { font-size: 10px; }
 .groupSizeOptions span { color: var(--dyad-muted); font-size: 8px; }
@@ -245,6 +246,10 @@
 .friendPickerHeading p { margin: 0; color: var(--dyad-muted); font-size: 9px; }
 .friendPickerHeading > a { flex: 0 0 auto; color: var(--dyad-aqua-deep); font-size: 9px; font-weight: 800; }
 .matchNotice { margin: 0 0 10px; padding: 9px 11px; border-radius: 10px; background: color-mix(in srgb, var(--dyad-aqua) 12%, white); color: var(--dyad-aqua-deep); font-size: 9px; font-weight: 720; line-height: 1.4; }
+.matchDeadline { grid-column: 1 / -1; padding-top: 2px; }
+.matchRecovery { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; padding: 10px 11px; border-radius: 11px; background: white; }
+.matchRecovery p { margin: 0; color: var(--dyad-muted); font-size: 8px; line-height: 1.4; }
+.matchRecovery button { flex: 0 0 auto; border: 0; background: transparent; color: var(--dyad-aqua-deep); font-size: 8px; font-weight: 850; }
 
 .groupPage { display: flex; height: 100vh; height: 100dvh; min-height: 0; flex-direction: column; }
 .groupHeader { display: grid; grid-template-columns: 30px 34px minmax(0,1fr) auto; align-items: center; gap: 9px; flex: 0 0 auto; padding: 12px 13px 11px; border-bottom: 1px solid var(--dyad-border); background: white; }
@@ -433,6 +438,8 @@
 .myActivityCopy strong { overflow: hidden; margin: 4px 0 5px; font-size: 13px; line-height: 1.18; letter-spacing: -.2px; text-overflow: ellipsis; white-space: nowrap; }
 .myActivityMeta { display: flex; align-items: center; gap: 4px; color: var(--dyad-aqua-deep); font-size: 9px; font-weight: 800; letter-spacing: .35px; text-transform: uppercase; }
 .myActivityDetail { overflow: hidden; color: var(--dyad-muted); font-size: 10px; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
+.myActivityMatchBadge { display: inline-flex; width: fit-content; align-items: center; gap: 4px; margin-top: 6px; padding: 4px 7px; border-radius: 999px; background: color-mix(in srgb, var(--dyad-aqua) 15%, white); color: var(--dyad-aqua-deep); font-size: 8px; font-weight: 800; }
+.myActivityMatchReady { background: var(--dyad-aqua); color: var(--dyad-ink); }
 .myActivityChevron { color: #a5aca9; }
 .myActivityPast { background: #f7f8f7; color: #7d8582; }
 .myActivityPast .myActivityArt { filter: grayscale(1); opacity: .5; }
@@ -625,6 +632,17 @@
 .emptyState p { max-width: 310px; margin: 11px 0 20px; color: var(--dyad-muted); font-size: 12px; line-height: 1.55; }
 .emptyState > a, .sectionEmptyState > a { display: inline-flex; align-items: center; gap: 6px; padding: 11px 15px; border-radius: 999px; background: var(--dyad-ink); color: white; font-size: 11px; font-weight: 780; }
 .emptyStateAction { display: inline-flex; min-height: 39px; align-items: center; padding: 0 15px; border: 0; border-radius: 999px; background: var(--dyad-ink); color: white; font-size: 11px; font-weight: 780; }
+.undoToast { position: fixed; z-index: 60; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom)); display: flex; width: min(392px, calc(100vw - 28px)); min-height: 48px; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px 10px 14px; transform: translateX(-50%); border-radius: 15px; background: var(--dyad-ink); color: white; box-shadow: 0 12px 30px #0d151333; }
+.undoToast span { display: inline-flex; align-items: center; gap: 7px; font-size: 10px; font-weight: 760; }
+.undoToast button { min-height: 30px; padding: 0 11px; border: 1px solid #ffffff55; border-radius: 999px; background: transparent; color: var(--dyad-aqua); font-size: 9px; font-weight: 850; }
+.matchFoundBanner { position: fixed; z-index: 61; top: calc(12px + env(safe-area-inset-top)); left: 50%; display: grid; width: min(402px, calc(100vw - 24px)); grid-template-columns: minmax(0,1fr) auto auto; align-items: center; gap: 10px; padding: 11px 10px 11px 13px; transform: translateX(-50%); border: 1px solid var(--dyad-aqua-deep); border-radius: 15px; background: var(--dyad-ink); color: white; box-shadow: 0 12px 30px #0d151333; }
+.matchFoundBanner > span { display: inline-flex; min-width: 0; align-items: center; gap: 7px; color: var(--dyad-aqua); font-size: 10px; }
+.matchFoundBanner a { padding: 8px 10px; border-radius: 999px; background: var(--dyad-aqua); color: var(--dyad-ink); font-size: 8px; font-weight: 850; }
+.matchFoundBanner > button { border: 0; background: transparent; color: white; font-size: 19px; line-height: 1; }
+.matchReasonCard { display: flex; align-items: flex-start; gap: 10px; margin: 14px 0; padding: 12px 13px; border: 1px solid color-mix(in srgb, var(--dyad-aqua-deep) 35%, var(--dyad-border)); border-radius: 14px; background: color-mix(in srgb, var(--dyad-aqua) 10%, white); color: var(--dyad-aqua-deep); font-size: 10px; line-height: 1.45; text-align: left; }
+.matchReasonCard > svg { flex: 0 0 auto; margin-top: 1px; }
+.matchReasonCard span, .matchReasonCard strong { display: block; }
+.matchReasonCard strong { margin-bottom: 3px; color: var(--dyad-ink); font-size: 9px; }
 .sectionEmptyState { padding: 17px 20px 20px; border-top: 1px solid var(--dyad-border); background: color-mix(in srgb, var(--dyad-surface) 55%, white); }
 .sectionEmptyState p { margin: 0 0 11px; color: var(--dyad-muted); font-size: 10px; line-height: 1.45; }
 .sectionEmptyState > a { padding: 8px 11px; font-size: 9px; }

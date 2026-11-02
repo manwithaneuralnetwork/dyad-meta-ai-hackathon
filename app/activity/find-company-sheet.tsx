@@ -6,7 +6,7 @@ import { Check, Clock3, Plus, Sparkles, UserRound, UsersRound, X } from "lucide-
 import Link from "next/link";
 import styles from "../dyad.module.css";
 import { type ActivityRecord, type PublicProfile, type Viewer } from "@/lib/activity-data";
-import { MATCHMAKING_PRESETS, type ActivityMatchmakingEntry, type ActivityMatchmakingStatus } from "@/lib/activity-matchmaking";
+import { acceptedSizes, formatGroupSizes, MATCHMAKING_SIZES, type ActivityMatchmakingEntry, type ActivityMatchmakingStatus } from "@/lib/activity-matchmaking";
 import { listFriends } from "@/lib/friend-data";
 import { createActivityGroup } from "@/lib/group-data";
 import { toggleInviteSelection } from "@/lib/group-rules";
@@ -23,7 +23,7 @@ export default function FindCompanySheet({ activity, viewer, initiallyOpen = fal
   const [open, setOpen] = useState(initiallyOpen);
   const [friends, setFriends] = useState<PublicProfile[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
-  const [preferenceIndex, setPreferenceIndex] = useState(1);
+  const [selectedSizes, setSelectedSizes] = useState<number[]>([3, 4]);
   const [matchEntry, setMatchEntry] = useState<ActivityMatchmakingEntry | null>(status?.entry ?? null);
   const [waitingCount, setWaitingCount] = useState(status?.waitingCount ?? 0);
   const [loading, setLoading] = useState(false);
@@ -78,10 +78,7 @@ export default function FindCompanySheet({ activity, viewer, initiallyOpen = fal
         setMatchEntry(status.entry ?? null);
         setWaitingCount(status.waitingCount ?? 0);
         onStatusChange?.({ entry: status.entry ?? null, waitingCount: status.waitingCount ?? 0 });
-        if (status.entry) {
-          const index = MATCHMAKING_PRESETS.findIndex((preset) => preset.min === status.entry?.min_group_size && preset.max === status.entry?.max_group_size);
-          if (index >= 0) setPreferenceIndex(index);
-        }
+        if (status.entry) setSelectedSizes(acceptedSizes(status.entry));
       })
       .catch((loadError) => { if (active) setError(loadError instanceof Error ? loadError.message : "Company options couldn’t be loaded."); })
       .finally(() => { if (active) setLoading(false); });
@@ -93,7 +90,11 @@ export default function FindCompanySheet({ activity, viewer, initiallyOpen = fal
       setError(viewer.kind === "demo" ? "Live matchmaking uses real accounts so people can receive invitations." : "Log in before joining matchmaking.");
       return;
     }
-    const preference = MATCHMAKING_PRESETS[preferenceIndex];
+    const sizes = [...selectedSizes].sort((a, b) => a - b);
+    if (!sizes.length) {
+      setError("Choose at least one group size.");
+      return;
+    }
     setBusy("matching");
     setError("");
     setNotice("");
@@ -101,7 +102,7 @@ export default function FindCompanySheet({ activity, viewer, initiallyOpen = fal
       const response = await fetch(`/api/activities/${activity.id}/matchmaking`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ minGroupSize: preference.min, maxGroupSize: preference.max }),
+        body: JSON.stringify({ acceptedGroupSizes: sizes }),
       });
       const payload = await response.json() as { matched?: boolean; groupId?: string; reason?: string; waitingCount?: number; error?: string };
       if (!response.ok) throw new Error(payload.error || "You couldn’t join matchmaking.");
@@ -111,7 +112,7 @@ export default function FindCompanySheet({ activity, viewer, initiallyOpen = fal
         return;
       }
       const nextWaitingCount = payload.waitingCount ?? waitingCount + 1;
-      const nextEntry: ActivityMatchmakingEntry = { user_id: viewer.userId, activity_id: activity.id, min_group_size: preference.min, max_group_size: preference.max, status: "waiting", group_id: null, match_reason: "", created_at: matchEntry?.created_at ?? new Date().toISOString(), updated_at: new Date().toISOString() };
+      const nextEntry: ActivityMatchmakingEntry = { user_id: viewer.userId, activity_id: activity.id, min_group_size: sizes[0], max_group_size: sizes[sizes.length - 1], accepted_group_sizes: sizes, status: "waiting", group_id: null, match_reason: "", created_at: matchEntry?.created_at ?? new Date().toISOString(), updated_at: new Date().toISOString() };
       setWaitingCount(nextWaitingCount);
       setMatchEntry(nextEntry);
       onStatusChange?.({ entry: nextEntry, waitingCount: nextWaitingCount });
@@ -158,7 +159,14 @@ export default function FindCompanySheet({ activity, viewer, initiallyOpen = fal
 
   const waiting = matchEntry?.status === "waiting";
   const matchedGroupId = matchEntry?.status === "matched" ? matchEntry.group_id : null;
-  const preference = MATCHMAKING_PRESETS[preferenceIndex];
+  const preferenceLabel = formatGroupSizes(selectedSizes);
+  const matchingDeadline = new Date(new Date(activity.starts_at).getTime() - 4 * 60 * 60 * 1000);
+
+  function toggleSize(size: number) {
+    setSelectedSizes((current) => current.includes(size)
+      ? current.length === 1 ? current : current.filter((item) => item !== size)
+      : [...current, size].sort((a, b) => a - b));
+  }
 
   return (
     <>
@@ -173,12 +181,13 @@ export default function FindCompanySheet({ activity, viewer, initiallyOpen = fal
             <header className={styles.sheetHeader}><div><p>{activity.title}</p><h2 id="company-sheet-title">Find your group</h2></div><button className={styles.sheetClose} type="button" aria-label="Close" onClick={() => setOpen(false)}><X size={18} /></button></header>
             <section className={styles.matchmakerCard}>
               <div className={styles.matchmakerHeading}><span><Sparkles size={16} /></span><div><small>Powered by Meta AI</small><h3>Let Muse make the group</h3></div></div>
-              <p>Choose a comfortable size. Muse uses shared interests and profile introductions to choose a friendly fit once enough people join.</p>
+              <p>Choose every group size you’d enjoy. More choices can help Muse find company sooner.</p>
+              <p className={styles.matchingCloses}>Matching closes {new Intl.DateTimeFormat("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" }).format(matchingDeadline)}.</p>
               <div className={styles.groupSizeOptions} aria-label="Preferred group size">
-                {MATCHMAKING_PRESETS.map((preset, index) => <button className={preferenceIndex === index ? styles.groupSizeSelected : ""} type="button" aria-pressed={preferenceIndex === index} disabled={busy !== null} key={preset.label} onClick={() => setPreferenceIndex(index)}><strong>{preset.label}</strong><span>{preset.detail}</span></button>)}
+                {MATCHMAKING_SIZES.map((size) => <button className={selectedSizes.includes(size) ? styles.groupSizeSelected : ""} type="button" aria-pressed={selectedSizes.includes(size)} disabled={busy !== null} key={size} onClick={() => toggleSize(size)}><strong>{size}</strong><span>{size === 2 ? "Duo" : "people"}</span></button>)}
               </div>
               {waiting ? <div className={styles.matchWaiting}><Clock3 size={15} /><span><strong>Matching is active</strong><small>{waitingCount} {waitingCount === 1 ? "person" : "people"} currently in this activity’s pool</small></span></div> : null}
-              <button className={styles.matchButton} type="button" disabled={busy !== null || loading} onClick={() => void joinMatchmaking()}><Sparkles size={16} />{busy === "matching" ? "Muse is checking…" : waiting ? `Update to ${preference.detail}` : "Join matchmaking"}</button>
+              <button className={styles.matchButton} type="button" disabled={busy !== null || loading || !selectedSizes.length} onClick={() => void joinMatchmaking()}><Sparkles size={16} />{busy === "matching" ? "Muse is checking…" : waiting ? `Update · ${preferenceLabel}` : "Join matchmaking"}</button>
               {waiting ? <button className={styles.leaveMatchButton} type="button" disabled={busy !== null} onClick={() => void leaveMatchmaking()}>{busy === "cancel" ? "Leaving…" : "Leave matching pool"}</button> : null}
             </section>
             <div className={styles.matchDivider}><span>or make a group with friends</span></div>
