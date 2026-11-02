@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Clock3, Plus, Sparkles, UserRound, UsersRound, X } from "lucide-react";
+import { Check, Clock3, Plus, UserRound, UsersRound, X } from "lucide-react";
 import Link from "next/link";
 import styles from "../dyad.module.css";
 import { type ActivityRecord, type PublicProfile, type Viewer } from "@/lib/activity-data";
@@ -10,6 +10,7 @@ import { acceptedSizes, formatGroupSizes, MATCHMAKING_SIZES, type ActivityMatchm
 import { listFriends } from "@/lib/friend-data";
 import { createActivityGroup } from "@/lib/group-data";
 import { toggleInviteSelection } from "@/lib/group-rules";
+import MuseMark from "../muse-mark";
 
 export default function FindCompanySheet({ activity, viewer, initiallyOpen = false, openSignal = 0, status, onStatusChange }: {
   activity: ActivityRecord;
@@ -180,14 +181,14 @@ export default function FindCompanySheet({ activity, viewer, initiallyOpen = fal
             <div className={styles.sheetHandle} />
             <header className={styles.sheetHeader}><div><p>{activity.title}</p><h2 id="company-sheet-title">Find your group</h2></div><button className={styles.sheetClose} type="button" aria-label="Close" onClick={() => setOpen(false)}><X size={18} /></button></header>
             <section className={styles.matchmakerCard}>
-              <div className={styles.matchmakerHeading}><span><Sparkles size={16} /></span><div><small>Powered by Meta AI</small><h3>Let Muse make the group</h3></div></div>
+              <div className={styles.matchmakerHeading}><span><MuseMark size={25} /></span><div><small>Powered by Meta AI</small><h3>Let Muse make the group</h3></div></div>
               <p>Choose every group size you’d enjoy. More choices can help Muse find company sooner.</p>
               <p className={styles.matchingCloses}>Matching closes {new Intl.DateTimeFormat("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" }).format(matchingDeadline)}.</p>
               <div className={styles.groupSizeOptions} aria-label="Preferred group size">
                 {MATCHMAKING_SIZES.map((size) => <button className={selectedSizes.includes(size) ? styles.groupSizeSelected : ""} type="button" aria-pressed={selectedSizes.includes(size)} disabled={busy !== null} key={size} onClick={() => toggleSize(size)}><strong>{size}</strong><span>{size === 2 ? "Duo" : "people"}</span></button>)}
               </div>
               {waiting ? <div className={styles.matchWaiting}><Clock3 size={15} /><span><strong>Matching is active</strong><small>{waitingCount} {waitingCount === 1 ? "person" : "people"} currently in this activity’s pool</small></span></div> : null}
-              <button className={styles.matchButton} type="button" disabled={busy !== null || loading || !selectedSizes.length} onClick={() => void joinMatchmaking()}><Sparkles size={16} />{busy === "matching" ? "Muse is checking…" : waiting ? `Update · ${preferenceLabel}` : "Join matchmaking"}</button>
+              <button className={styles.matchButton} type="button" disabled={busy !== null || loading || !selectedSizes.length} onClick={() => void joinMatchmaking()}><MuseMark size={22} />{busy === "matching" ? "Muse is checking…" : waiting ? `Update · ${preferenceLabel}` : "Join matchmaking"}</button>
               {waiting ? <button className={styles.leaveMatchButton} type="button" disabled={busy !== null} onClick={() => void leaveMatchmaking()}>{busy === "cancel" ? "Leaving…" : "Leave matching pool"}</button> : null}
             </section>
             <div className={styles.matchDivider}><span>or make a group with friends</span></div>

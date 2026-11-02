@@ -270,6 +270,7 @@
 .groupLocationCard span, .groupLocationCard strong { display: block; }
 .groupLocationCard span { margin-bottom: 4px; color: var(--dyad-aqua-deep); font-size: 9px; font-weight: 820; text-transform: uppercase; }
 .groupLocationCard strong { font-size: 11px; line-height: 1.35; }
+.groupLocationCard a { display: inline-flex; margin-top: 9px; color: var(--dyad-aqua-deep); font-size: 9px; font-weight: 820; }
 .groupMenuDismiss { position: fixed; z-index: 60; inset: 0; padding: 0; border: 0; background: transparent; }
 .groupMenu { position: absolute; z-index: 61; top: 41px; right: 0; width: 158px; padding: 6px; border: 1px solid var(--dyad-border); border-radius: 13px; background: white; box-shadow: 0 12px 30px rgba(17,21,20,.14); }
 .groupMenuAction { display: flex; width: 100%; min-height: 39px; align-items: center; gap: 9px; padding: 0 10px; border: 0; border-radius: 9px; background: white; color: var(--dyad-ink); font-size: 11px; font-weight: 760; }
@@ -326,6 +327,15 @@
 .composer { display: grid; grid-template-columns: minmax(0,1fr) 42px; gap: 8px; flex: 0 0 auto; padding: 11px 13px calc(11px + env(safe-area-inset-bottom)); border-top: 1px solid var(--dyad-border); background: white; }
 .composer input { min-width: 0; height: 42px; padding: 0 15px; border: 1px solid var(--dyad-border); border-radius: 999px; outline: none; background: var(--dyad-surface); font: inherit; font-size: 12px; }
 .composer input:focus { border-color: var(--dyad-aqua-deep); background: white; }
+.museComposerField { position: relative; display: block; min-width: 0; height: 42px; overflow: hidden; border: 1px solid var(--dyad-border); border-radius: 999px; background: var(--dyad-surface); }
+.museComposerField:focus-within { border-color: var(--dyad-aqua-deep); background: white; }
+.museComposerField .museComposerMirror { position: absolute; z-index: 1; top: 0; left: 15px; display: flex; align-items: center; height: 40px; color: var(--dyad-ink); font-size: 12px; line-height: 40px; white-space: pre; pointer-events: none; will-change: transform; }
+.museComposerMirror strong { color: var(--dyad-aqua-deep); font-weight: 900; }
+.museComposerField input { position: relative; z-index: 2; width: 100%; padding: 0 15px; border: 0; background: transparent; color: transparent; caret-color: var(--dyad-ink); }
+.museComposerField input:focus { background: transparent; }
+.museComposerField input::placeholder { color: var(--dyad-muted); opacity: .75; }
+.museMark { display: inline-grid; flex: 0 0 auto; overflow: hidden; place-items: center; border-radius: 32%; background: white; }
+.museMarkImage { display: block; width: 154%; height: 154%; max-width: none; object-fit: cover; }
 .sendButton { display: grid; place-items: center; width: 42px; height: 42px; padding: 0; border: 0; border-radius: 50%; background: var(--dyad-ink); color: var(--dyad-aqua); }
 .sendButton:disabled { opacity: .35; }
 .groupInviteState { display: grid; place-items: center; margin: auto; padding: 32px 28px; text-align: center; }

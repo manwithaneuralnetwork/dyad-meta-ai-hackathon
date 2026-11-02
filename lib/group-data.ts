@@ -95,7 +95,7 @@ export async function listMyGroups(viewer: Viewer): Promise<GroupSummary[]> {
 
   return groups.flatMap((group) => {
     const activity = activityById.get(group.activity_id);
-    if (!activity) return [];
+    if (!group || !activity) return [];
     const message = latestMessage.get(group.id);
     return [{
       groupId: group.id,
@@ -131,7 +131,7 @@ export async function listInboxNotifications(viewer: Viewer): Promise<InboxNotif
     || (invite.inviter_id === viewer.userId && invite.status !== "pending")
   );
   const groupIds = [...new Set([...relevantInvites.map((invite) => invite.group_id), ...matchResult.data.flatMap((match) => match.group_id ? [match.group_id] : [])])];
-  const { data: groups, error: groupsError } = groupIds.length ? await supabase.from("groups").select("id, activity_id, created_by").in("id", groupIds) : { data: [], error: null };
+  const { data: groups, error: groupsError } = groupIds.length ? await supabase.from("groups").select("id, activity_id, created_by, creation_mode, match_reason").in("id", groupIds) : { data: [], error: null };
   if (groupsError) throw groupsError;
   const activityIds = [...new Set(groups.map((group) => group.activity_id))];
   const relevantFriendships = friendshipResult.data.filter((friendship) =>
@@ -157,7 +157,7 @@ export async function listInboxNotifications(viewer: Viewer): Promise<InboxNotif
   const groupNotifications: InboxNotification[] = relevantInvites.flatMap((invite) => {
     const group = groupById.get(invite.group_id);
     const activity = group ? activityById.get(group.activity_id) : undefined;
-    if (!activity) return [];
+    if (!group || !activity) return [];
     const incoming = invite.invitee_id === viewer.userId;
     const personId = incoming ? invite.inviter_id : invite.invitee_id;
     const personName = nameById.get(personId) || "Someone";
@@ -166,9 +166,9 @@ export async function listInboxNotifications(viewer: Viewer): Promise<InboxNotif
       kind: incoming ? "group_invite" as const : "invite_response" as const,
       href: `/group?id=${invite.group_id}`,
       createdAt: invite.responded_at || invite.created_at,
-      title: incoming ? "New group invitation" : `Invitation ${invite.status}`,
+      title: incoming ? (group.creation_mode === "matchmaking" ? "Muse found your group" : "New group invitation") : `Invitation ${invite.status}`,
       body: incoming
-        ? `${personName} invited you to ${activity.title}.`
+        ? (group.creation_mode === "matchmaking" ? (group.match_reason || `A new group is ready for ${activity.title}.`) : `${personName} invited you to ${activity.title}.`)
         : `${personName} ${invite.status} your invitation to ${activity.title}.`,
       unread: !readKeys.has(notificationKey(incoming ? "group_invite" : "invite_response", invite.id)),
     }];
@@ -191,7 +191,7 @@ export async function listInboxNotifications(viewer: Viewer): Promise<InboxNotif
   const matchNotifications: InboxNotification[] = matchResult.data.flatMap((match) => {
     const group = match.group_id ? groupById.get(match.group_id) : undefined;
     const activity = activityById.get(match.activity_id);
-    if (!group || group.created_by !== viewer.userId || !activity || !match.group_id) return [];
+    if (!group || group.created_by !== viewer.userId || !activity || !match.group_id || relevantInvites.some((invite) => invite.group_id === match.group_id && invite.invitee_id === viewer.userId)) return [];
     const id = `${match.activity_id}-${match.group_id}`;
     return [{
       id,

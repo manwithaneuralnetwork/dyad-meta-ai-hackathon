@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Check, ChevronRight, Compass, MessageCircle, Search, Sparkles } from "lucide-react";
+import { Check, ChevronRight, Compass, MessageCircle, Search } from "lucide-react";
 import styles from "../dyad.module.css";
 import { AppHeader, BottomNavigation } from "../app-navigation";
 import {
@@ -17,6 +17,7 @@ import {
 } from "@/lib/activity-data";
 import { listMyGroups, type GroupSummary } from "@/lib/group-data";
 import { listMyMatchmaking, type ActivityMatchmakingEntry } from "@/lib/activity-matchmaking";
+import MuseMark from "../muse-mark";
 
 type ActivityKind = "group" | "interested" | "past";
 
@@ -28,7 +29,7 @@ function ActivityRow({ activity, kind, groupId, match }: { activity: ActivityRec
         <span className={styles.myActivityMeta}>{kind === "group" ? <MessageCircle size={11} /> : null}{kind === "past" ? `Passed · ${formatActivityDate(activity.starts_at)}` : formatActivityDate(activity.starts_at)}</span>
         <strong>{activity.title}</strong>
         <span className={styles.myActivityDetail}>{activityLocation(activity) || activity.city}</span>
-        {match?.status === "waiting" ? <span className={styles.myActivityMatchBadge}><Sparkles size={10} />Muse is matching</span> : null}
+        {match?.status === "waiting" ? <span className={styles.myActivityMatchBadge}><MuseMark size={14} />Muse is matching</span> : null}
         {match?.status === "matched" ? <span className={`${styles.myActivityMatchBadge} ${styles.myActivityMatchReady}`}><Check size={10} />Match ready</span> : null}
       </span>
       <ChevronRight className={styles.myActivityChevron} size={18} aria-hidden="true" />

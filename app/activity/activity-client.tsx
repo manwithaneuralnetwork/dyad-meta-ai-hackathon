@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CalendarDays, Check, Clock3, Heart, MapPin, RefreshCw, Sparkles, Ticket, UsersRound } from "lucide-react";
+import { ArrowRight, CalendarDays, Check, Clock3, Heart, MapPin, RefreshCw, Ticket, UsersRound } from "lucide-react";
 import styles from "../dyad.module.css";
 import FindCompanySheet from "./find-company-sheet";
 import SmartBackButton from "../smart-back-button";
 import UndoToast from "../undo-toast";
+import MuseMark from "../muse-mark";
 import {
   activityLocation,
   formatActivityDate,
@@ -156,7 +157,7 @@ export default function ActivityClient({ activityId, openCompanyInitially }: { a
           {matchStatus?.entry && ["waiting", "matched"].includes(matchStatus.entry.status) && !state.groupId ? (
             <section className={`${styles.matchProgressCard} ${matchStatus.entry.status === "matched" ? styles.matchProgressReady : ""}`} aria-live="polite">
               <div className={styles.matchProgressHeader}>
-                <span className={styles.matchProgressOrb}><Sparkles size={17} /></span>
+                <span className={styles.matchProgressOrb}><MuseMark size={26} /></span>
                 <div><p>Muse matchmaking</p><h2>{matchStatus.entry.status === "matched" ? "Your match is ready" : "Finding your group"}</h2></div>
                 <span className={styles.matchProgressLive}><span />{matchStatus.entry.status === "matched" ? "Ready" : "Live"}</span>
               </div>
@@ -185,7 +186,7 @@ export default function ActivityClient({ activityId, openCompanyInitially }: { a
         </div>
       </article>
       {showUndo ? <UndoToast message="Added to My Activities" onDismiss={() => setShowUndo(false)} onUndo={() => void undoInterested()} /> : null}
-      {matchFound && matchStatus?.entry?.group_id ? <div className={styles.matchFoundBanner} role="alert"><span><Sparkles size={15} /><strong>Muse found your group</strong></span><Link href={`/group?id=${matchStatus.entry.group_id}`}>View invitation</Link><button type="button" aria-label="Dismiss" onClick={() => setMatchFound(false)}>×</button></div> : null}
+      {matchFound && matchStatus?.entry?.group_id ? <div className={styles.matchFoundBanner} role="alert"><span><MuseMark size={22} /><strong>Muse found your group</strong></span><Link href={`/group?id=${matchStatus.entry.group_id}`}>View invitation</Link><button type="button" aria-label="Dismiss" onClick={() => setMatchFound(false)}>×</button></div> : null}
     </main>
   );
 }

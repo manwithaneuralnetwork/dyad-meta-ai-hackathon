@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Bell, Check, Compass, MailOpen, Sparkles, UserPlus, X } from "lucide-react";
+import { Bell, Check, Compass, MailOpen, UserPlus, X } from "lucide-react";
 import styles from "../dyad.module.css";
 import { AppHeader, BottomNavigation } from "../app-navigation";
 import { resolveViewer } from "@/lib/activity-data";
 import { listInboxNotifications, markInboxNotificationsRead, subscribeToNotificationChanges, unsubscribeFromGroup, type InboxNotification } from "@/lib/group-data";
+import MuseMark from "../muse-mark";
 
 export default function InboxPage() {
   const [notifications, setNotifications] = useState<InboxNotification[]>([]);
@@ -51,7 +52,7 @@ export default function InboxPage() {
                 const declined = notification.title.endsWith("declined");
                 return <Link className={styles.chatListRow} href={notification.href} key={`${notification.kind}-${notification.id}`}>
                   <span className={`${styles.chatListAvatar} ${styles.inboxNotificationIcon}`}>
-                    {notification.kind === "match_ready" ? <Sparkles size={19} /> : notification.kind === "friend_request" ? <UserPlus size={19} /> : notification.kind === "group_invite" ? <MailOpen size={19} /> : accepted ? <Check size={19} /> : declined ? <X size={19} /> : <Bell size={19} />}
+                    {notification.kind === "match_ready" ? <MuseMark size={24} /> : notification.kind === "friend_request" ? <UserPlus size={19} /> : notification.kind === "group_invite" ? <MailOpen size={19} /> : accepted ? <Check size={19} /> : declined ? <X size={19} /> : <Bell size={19} />}
                   </span>
                   <span className={styles.chatListCopy}><strong>{notification.title}</strong><span>{notification.body}</span></span>
                   <span className={styles.chatListMeta}><time>{relativeTime(notification.createdAt)}</time>{notification.unread ? <span>New</span> : null}</span>

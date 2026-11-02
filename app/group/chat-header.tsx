@@ -21,6 +21,7 @@ type ChatHeaderProps = {
 export default function ChatHeader({ activityHref = "/feed", backHref, direct, imageLabel, location, onInvite, onLeave, subtitle, title }: ChatHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
+  const mapsHref = location ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}` : activityHref;
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -53,6 +54,7 @@ export default function ChatHeader({ activityHref = "/feed", backHref, direct, i
               <div className={styles.groupLocationCard} role="status">
                 <span>Activity location</span>
                 <strong>{location || "See activity details"}</strong>
+                <a href={mapsHref} target={location ? "_blank" : undefined} rel={location ? "noreferrer" : undefined}>Open in Google Maps →</a>
               </div>
             )}
           </div>

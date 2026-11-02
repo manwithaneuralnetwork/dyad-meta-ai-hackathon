@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Compass, MessageCircle, RefreshCw, Send, Sparkles, Trash2 } from "lucide-react";
+import { Compass, MessageCircle, RefreshCw, Send, Trash2 } from "lucide-react";
 import styles from "../dyad.module.css";
 import ChatHeader from "./chat-header";
 import InvitePeopleSheet from "./invite-people-sheet";
@@ -11,6 +11,8 @@ import { activityLocation, resolveViewer, type Viewer } from "@/lib/activity-dat
 import { getGroupDetail, leaveGroup, markGroupRead, respondToInvite, scrapGroup, sendGroupMessage, subscribeToGroupMessages, subscribeToGroupPresence, unsubscribeFromGroup, type GroupDetail, type GroupMessage } from "@/lib/group-data";
 import type { GroupBrief } from "@/lib/group-brief";
 import { containsMuseMention } from "@/lib/muse-chat";
+import MuseComposerInput from "./muse-composer-input";
+import MuseMark from "../muse-mark";
 
 type TimelineItem =
   | { id: string; kind: "notice"; at: string; text: string }
@@ -180,7 +182,8 @@ export default function GroupClient({ groupId }: { groupId: string }) {
   if (loading) return <GroupEmpty title="Loading conversation…" />;
   if (!detail) return <GroupEmpty title="Conversation not found" body={error || "It may have been removed or you may no longer have access."} />;
 
-  const subtitle = `${detail.members.length} ${detail.members.length === 1 ? "member" : "members"} · ${new Intl.DateTimeFormat("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" }).format(new Date(detail.activity.starts_at))}`;
+  const activityTime = new Intl.DateTimeFormat("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" }).format(new Date(detail.activity.starts_at));
+  const subtitle = detail.accepted ? `${detail.members.length} ${detail.members.length === 1 ? "member" : "members"} · ${activityTime}` : `Invitation · ${activityTime}`;
 
   return (
     <main className={styles.pageBackdrop}>
@@ -192,7 +195,7 @@ export default function GroupClient({ groupId }: { groupId: string }) {
             <p className={styles.eyebrow}>Activity invitation</p>
             <h1>Join the group?</h1>
             <p>You’ve been invited to plan {detail.activity.title} together.</p>
-            {detail.creationMode === "matchmaking" && detail.matchReason ? <div className={styles.matchReasonCard}><Sparkles size={16} /><span><strong>Why Muse chose this group</strong>{detail.matchReason}</span></div> : null}
+            {detail.creationMode === "matchmaking" && detail.matchReason ? <div className={styles.matchReasonCard}><MuseMark size={24} /><span><strong>Why Muse chose this group</strong>{detail.matchReason}</span></div> : null}
             {error ? <p className={styles.pageError} role="alert">{error}</p> : null}
             <div><button type="button" disabled={busy} onClick={() => void respond("declined")}>Not now</button><button type="button" disabled={busy} onClick={() => void respond("accepted")}>{busy ? "Joining…" : "Accept invite"}</button></div>
           </section>
@@ -200,16 +203,16 @@ export default function GroupClient({ groupId }: { groupId: string }) {
           <>
             <div className={styles.chatScroll} ref={scrollRef}>
               <p className={styles.chatDay}>Conversation</p>
-              {detail.creationMode === "matchmaking" && detail.matchReason ? <section className={styles.matchReasonCard}><Sparkles size={16} /><span><strong>Why this group</strong>{detail.matchReason}</span></section> : null}
+              {detail.creationMode === "matchmaking" && detail.matchReason ? <section className={styles.matchReasonCard}><MuseMark size={24} /><span><strong>Why this group</strong>{detail.matchReason}</span></section> : null}
               {brief ? (
                 <section className={styles.aiBriefCard} aria-live="polite">
-                  <div className={styles.aiBriefHeading}><span><Sparkles size={16} /></span><div><small>Planned with Meta AI</small><h2>{brief.title}</h2></div><button type="button" onClick={() => void generateBrief()} disabled={briefLoading} aria-label="Refresh meetup brief"><RefreshCw size={15} /></button></div>
+                  <div className={styles.aiBriefHeading}><span><MuseMark size={25} /></span><div><small>Planned with Meta AI</small><h2>{brief.title}</h2></div><button type="button" onClick={() => void generateBrief()} disabled={briefLoading} aria-label="Refresh meetup brief"><RefreshCw size={15} /></button></div>
                   <dl><div><dt>Meet</dt><dd>{brief.arrival}</dd></div><div><dt>Open with</dt><dd>{brief.opener}</dd></div><div><dt>Check in</dt><dd>{brief.checkIn}</dd></div></dl>
                   <p>Built from activity details only—private messages stay private.</p>
                 </section>
               ) : (
                 <section className={styles.aiBriefPrompt}>
-                  <span><Sparkles size={18} /></span><div><strong>Make meeting up easier</strong><p>Meta AI can turn the activity details into a quick arrival plan and conversation starter.</p></div><button type="button" onClick={() => void generateBrief()} disabled={briefLoading}>{briefLoading ? "Planning…" : "Plan meetup"}</button>
+                  <span><MuseMark size={27} /></span><div><strong>Make meeting up easier</strong><p>Meta AI can turn the activity details into a quick arrival plan and conversation starter.</p></div><button type="button" onClick={() => void generateBrief()} disabled={briefLoading}>{briefLoading ? "Planning…" : "Plan meetup"}</button>
                 </section>
               )}
               {detail.canScrap ? (
@@ -223,7 +226,7 @@ export default function GroupClient({ groupId }: { groupId: string }) {
                 if (item.kind === "notice") return <p className={item.id === "created" ? styles.chatNotice : styles.chatEvent} key={item.id}>{item.text}</p>;
                 if (item.message.author_type === "muse") return (
                   <div className={`${styles.messageRow} ${styles.museMessageRow}`} key={item.id}>
-                    <span className={`${styles.chatAvatar} ${styles.museAvatar}`}><Sparkles size={14} /></span>
+                    <span className={`${styles.chatAvatar} ${styles.museAvatar}`}><MuseMark size={29} /></span>
                     <div className={styles.messageStack}>
                       <span className={`${styles.messageName} ${styles.museName}`}>Muse <em>Meta AI</em></span>
                       <p className={`${styles.messageBubble} ${styles.messageBubbleMuse}`}>{item.message.body}</p>
@@ -236,12 +239,12 @@ export default function GroupClient({ groupId }: { groupId: string }) {
                 if (own) return <div className={styles.messageRowOwn} key={item.id}><div><p className={`${styles.messageBubble} ${styles.messageBubbleOwn}`}>{item.message.body}</p><time className={`${styles.messageTime} ${styles.messageTimeOwn}`}>{formatTime(item.at)}</time></div></div>;
                 return <div className={styles.messageRow} key={item.id}><Link className={styles.chatProfileLink} href={`/profile?person=${item.message.sender_id}`} aria-label={`View ${profile?.display_name || "member"} profile`}><span className={styles.chatAvatar}>{initials(profile?.display_name)}</span></Link><div className={styles.messageStack}><Link className={styles.messageName} href={`/profile?person=${item.message.sender_id}`}>{profile?.display_name || "Member"}</Link><p className={styles.messageBubble}>{item.message.body}</p><time className={styles.messageTime}>{formatTime(item.at)}</time></div></div>;
               })}
-              {museThinking ? <div className={`${styles.messageRow} ${styles.museMessageRow}`} aria-live="polite"><span className={`${styles.chatAvatar} ${styles.museAvatar}`}><Sparkles size={14} /></span><div className={styles.messageStack}><span className={`${styles.messageName} ${styles.museName}`}>Muse <em>Meta AI</em></span><p className={`${styles.messageBubble} ${styles.messageBubbleMuse} ${styles.museTyping}`}>Thinking<span>…</span></p></div></div> : null}
+              {museThinking ? <div className={`${styles.messageRow} ${styles.museMessageRow}`} aria-live="polite"><span className={`${styles.chatAvatar} ${styles.museAvatar}`}><MuseMark size={29} /></span><div className={styles.messageStack}><span className={`${styles.messageName} ${styles.museName}`}>Muse <em>Meta AI</em></span><p className={`${styles.messageBubble} ${styles.messageBubbleMuse} ${styles.museTyping}`}>Thinking<span>…</span></p></div></div> : null}
               {error ? <p className={styles.pageError} role="alert">{error}</p> : null}
               {notice ? <p className={styles.chatNotice} role="status">{notice}</p> : null}
             </div>
             <form className={styles.composer} onSubmit={(event) => { event.preventDefault(); void sendMessage(); }}>
-              <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Message · @muse for help" aria-label="Message the group" maxLength={2000} />
+              <MuseComposerInput value={draft} onChange={setDraft} />
               <button className={styles.sendButton} type="submit" disabled={busy || !draft.trim()} aria-label="Send message"><Send size={18} /></button>
             </form>
           </>
