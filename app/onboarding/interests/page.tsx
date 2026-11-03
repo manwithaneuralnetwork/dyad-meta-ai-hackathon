@@ -28,13 +28,6 @@ export default function InterestsPage() {
     async function loadInterests() {
       const tags = await listInterestTags();
       if (active) setAllTags(tags.map((tag) => tag.label));
-      if (getAppMode() === "demo") {
-        const stored = window.sessionStorage.getItem("dyad-interests");
-        if (active && stored) setSelected(JSON.parse(stored) as string[]);
-        if (active) setLoading(false);
-        return;
-      }
-
       const supabase = createSupabaseBrowserClient();
       const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
       if (!user || !supabase) {
@@ -42,7 +35,7 @@ export default function InterestsPage() {
         return;
       }
 
-      startRealSession();
+      if (getAppMode() !== "demo") startRealSession();
       const { data, error: loadError } = await supabase
         .from("profile_interests")
         .select("interest")
@@ -62,12 +55,6 @@ export default function InterestsPage() {
     if (selected.length < 5 || saving) return;
     setSaving(true);
     setError("");
-
-    if (getAppMode() === "demo") {
-      window.sessionStorage.setItem("dyad-interests", JSON.stringify(selected));
-      router.push("/onboarding/profile");
-      return;
-    }
 
     const supabase = createSupabaseBrowserClient();
     const { error: saveError } = supabase

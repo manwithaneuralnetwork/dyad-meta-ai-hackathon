@@ -4,30 +4,71 @@ import { useEffect, useState } from "react";
 import { Check, LocateFixed, MapPin } from "lucide-react";
 import SettingsShell from "../settings-shell";
 import styles from "../../dyad.module.css";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { resolveViewer, type Viewer } from "@/lib/activity-data";
 
 export default function LocationSettingsPage() {
   const [address, setAddress] = useState("");
   const [distance, setDistance] = useState("15");
   const [status, setStatus] = useState<"idle" | "locating" | "shared" | "denied" | "outside" | "saved">("idle");
+  const [viewer, setViewer] = useState<Viewer>({ kind: "anonymous" });
 
   useEffect(() => {
-    const stored = sessionStorage.getItem("dyad-location");
-    if (!stored) return;
-    const value = JSON.parse(stored);
-    setAddress(value.address ?? "");
-    setDistance(value.distance ?? "15");
-    if (value.mode === "gps") setStatus("shared");
+    void (async () => {
+      const nextViewer = await resolveViewer();
+      setViewer(nextViewer);
+      if (nextViewer.kind === "real") {
+        const supabase = createSupabaseBrowserClient();
+        const { data } = await supabase!.from("user_locations").select("address, source, search_radius_miles").eq("user_id", nextViewer.userId).maybeSingle();
+        if (data) {
+          setAddress(data.address ?? "");
+          setDistance(String(data.search_radius_miles));
+          setStatus(data.source === "gps" ? "shared" : "saved");
+        }
+        return;
+      }
+      const stored = sessionStorage.getItem("dyad-location");
+      if (!stored) return;
+      const value = JSON.parse(stored);
+      setAddress(value.address ?? "");
+      setDistance(value.distance ?? "15");
+      if (value.mode === "gps") setStatus("shared");
+    })();
   }, []);
+
+  async function persistLocation(value: { mode: "gps"; latitude: number; longitude: number } | { mode: "address"; address: string }) {
+    if (viewer.kind === "real") {
+      const supabase = createSupabaseBrowserClient();
+      if (!supabase) return false;
+      const { error } = await supabase.rpc("complete_my_onboarding", value.mode === "gps" ? {
+        p_source: "gps",
+        p_latitude: value.latitude,
+        p_longitude: value.longitude,
+        p_search_radius_miles: Number(distance),
+      } : {
+        p_source: "address",
+        p_address: value.address,
+        p_search_radius_miles: Number(distance),
+      });
+      return !error;
+    }
+    sessionStorage.setItem("dyad-location", JSON.stringify({ ...value, distance }));
+    return true;
+  }
 
   function shareLocation() {
     setStatus("locating");
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
         if (!isSanDiegoArea(position.coords.latitude, position.coords.longitude)) {
           setStatus("outside");
           return;
         }
-        sessionStorage.setItem("dyad-location", JSON.stringify({ mode: "gps", latitude: position.coords.latitude, longitude: position.coords.longitude, distance }));
+        const saved = await persistLocation({ mode: "gps", latitude: position.coords.latitude, longitude: position.coords.longitude });
+        if (!saved) {
+          setStatus("denied");
+          return;
+        }
         setAddress("");
         setStatus("shared");
       },
@@ -36,14 +77,14 @@ export default function LocationSettingsPage() {
     );
   }
 
-  function saveAddress(addressOverride?: string) {
+  async function saveAddress(addressOverride?: string) {
     const nextAddress = addressOverride ?? address;
     if (!isSanDiegoAddress(nextAddress)) {
       setStatus("outside");
       return;
     }
     setAddress(nextAddress);
-    sessionStorage.setItem("dyad-location", JSON.stringify({ mode: "address", address: nextAddress, distance }));
+    if (!await persistLocation({ mode: "address", address: nextAddress })) return;
     setStatus("saved");
   }
 
@@ -58,14 +99,14 @@ export default function LocationSettingsPage() {
       {status === "outside" && <p className={styles.settingsError}>Dyad is currently available in San Diego County. More cities are opening soon.</p>}
       <div className={styles.regionAvailability}>
         <p><strong>Available now</strong><span>San Diego County</span></p>
-        <button className={styles.sanDiegoButton} type="button" onClick={() => saveAddress("9500 Gilman Dr, La Jolla, CA 92093")}><MapPin size={16} /><span><strong>Use San Diego</strong><small>9500 Gilman Dr · {distance}-mile radius</small></span><Check size={17} /></button>
+        <button className={styles.sanDiegoButton} type="button" onClick={() => void saveAddress("9500 Gilman Dr, La Jolla, CA 92093")}><MapPin size={16} /><span><strong>Use San Diego</strong><small>9500 Gilman Dr · {distance}-mile radius</small></span><Check size={17} /></button>
         <button className={styles.regionUnavailable} type="button" disabled><MapPin size={16} /><span><strong>Choose another region</strong><small>More cities are opening soon</small></span></button>
       </div>
       <div className={styles.locationDivider}><span>OR</span></div>
       <div className={styles.settingsForm}>
         <label><span>San Diego street address</span><span className={styles.locationInputWrap}><MapPin size={17} /><input value={address} onChange={(event) => setAddress(event.target.value)} placeholder="9500 Gilman Dr, La Jolla, CA" /></span></label>
         <label><span>Search distance</span><select value={distance} onChange={(event) => setDistance(event.target.value)}><option value="5">Within 5 miles</option><option value="15">Within 15 miles</option><option value="30">Within 30 miles</option><option value="50">Within 50 miles</option></select></label>
-        <button className={styles.settingsSaveButton} type="button" disabled={!address.trim()} onClick={() => saveAddress()}>{status === "saved" ? <><Check size={17} />Address saved</> : "Use this address"}</button>
+        <button className={styles.settingsSaveButton} type="button" disabled={!address.trim()} onClick={() => void saveAddress()}>{status === "saved" ? <><Check size={17} />Address saved</> : "Use this address"}</button>
       </div>
     </SettingsShell>
   );

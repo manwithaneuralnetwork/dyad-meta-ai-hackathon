@@ -6,7 +6,7 @@ The app intentionally separates **Interested** (private) from **Find company** (
 
 ## Current status
 
-The approved mobile UI, two-mode authentication, onboarding, persistent activity catalog, AI-assisted interest tags, duplicate rejection, Discovery filters, per-user activity state, activity groups, invitations, and Realtime chat are implemented. Demo mode remains isolated in the current browser session; real accounts persist their social data in Supabase behind RLS.
+The approved mobile UI, two-mode authentication, onboarding, persistent activity catalog, AI-assisted interest tags, duplicate rejection, Discovery filters, per-user activity state, matchmaking, activity groups, invitations, and Realtime chat are implemented. Real accounts persist normally. Demo accounts use the same full Supabase-backed product path, then erase their profile, social data, and memberships when ended or expired.
 
 The implementation contract and setup status live in [docs/golden-path-readiness.md](docs/golden-path-readiness.md).
 
@@ -17,7 +17,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`. The finished app will support persistent Supabase accounts plus an isolated session-only demo identity for judges.
+Open `http://localhost:3000`. Judges can use a temporary demo identity with the full social flow; it expires after two hours and can be erased immediately from the Profile screen.
 
 Useful checks:
 

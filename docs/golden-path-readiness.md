@@ -7,7 +7,7 @@ This document is the implementation contract for the hackathon build. It replace
 ## Product constraints already decided
 
 - Judges should not need to create a real account.
-- Real accounts persist; demo changes last for the current browser session only.
+- Real accounts persist; demo accounts use the full social graph temporarily and are erased when ended or expired.
 - The judge path must work even if an external API is slow or unavailable.
 - `Interested` is private until the user explicitly chooses `Find company`.
 - Profiles show a name, image, one-line introduction, attendance count, and interests; they do not expose age or gender in the picker.
@@ -22,9 +22,9 @@ This document is the implementation contract for the hackathon build. It replace
 Dyad has two deliberately separated modes:
 
 - **Real mode:** email/password users authenticate with Supabase. Profiles, interests, activity states, discoverability, invitations, groups, connections, and messages persist in Postgres. Group messages update through Supabase Realtime.
-- **Demo mode:** an isolated session identity and all changes stay in `sessionStorage`. Demo users never write to Supabase, never appear to real users, and cannot message real accounts.
+- **Demo mode:** a temporary, confirmed Supabase identity follows the same RLS-protected product path as a real user, including matchmaking, invitations, groups, friends, and chat. The Profile screen can erase it immediately; a scheduled cleanup removes abandoned identities after two hours.
 
-The modes share UI and domain types but use different repositories behind one interface. This prevents demo records from contaminating the real social graph while preserving a reliable judge path.
+The modes share the same repositories and permissions so the judge experiences the real product. Demo identities are visibly labeled, registered in a service-only expiry table, and removed with ownership-safe cleanup so shared groups survive for remaining members.
 
 Shared supporting data:
 
@@ -33,7 +33,7 @@ Shared supporting data:
 
 ### Real social proof for judging
 
-Before the demo, create a small set of genuine accounts for the user and willing helpers. Each person should complete a profile, mark the same controlled activity as discoverable, and join one test group. This lets judges see live people and Realtime chat without requiring strangers or fabricating activity. Demo mode never invents people or conversations.
+Before the demo, keep a small set of genuine helper accounts available. A judge’s temporary demo identity can match with them, receive invitations, and chat in real time without requiring registration or fabricating people and conversations.
 
 ### Supabase scope
 
@@ -44,7 +44,7 @@ Minimum persistent tables: `profiles`, `profile_interests`, `activities`, `activ
 ## Golden path
 
 1. Landing page → Log in or Create account.
-2. Log into a persistent account or choose the clearly labeled session-only demo path.
+2. Log into a persistent account or choose the clearly labeled temporary demo path.
 3. Pick at least five interests.
 4. Share location, enter an address, or use the seeded San Diego demo location.
 5. Browse Discovery and open an activity.
@@ -59,7 +59,7 @@ Minimum persistent tables: `profiles`, `profile_interests`, `activities`, `activ
 | Action | Session result | Destination/feedback |
 | --- | --- | --- |
 | Create account / Log in | Creates or restores a Supabase session | Onboarding or last valid app page |
-| Continue as demo | Creates a local seeded session without Supabase writes | Onboarding interests |
+| Continue as demo | Creates a temporary Supabase identity with a two-hour expiry | Onboarding interests |
 | Select interest | Adds/removes a tag | Counter enforces five minimum |
 | Save location | Stores GPS coordinates or typed address | Discovery |
 | Interested | Toggles private activity interest | Button state changes immediately |
@@ -102,8 +102,8 @@ The Google OAuth control has been replaced with a prominent `Continue as demo` b
 
 ## Implementation checkpoints
 
-1. **Identity and onboarding — complete.** Real email/password accounts use Supabase Auth. Profiles, interests, and private locations persist behind RLS. Demo onboarding uses `sessionStorage` only.
-2. **Discovery and activity state — complete.** Feed fixtures are removed. Supabase stores the shared catalog plus real-user Interested, Saved, and Find company state; demo choices remain session-only.
+1. **Identity and onboarding — complete.** Real email/password accounts use Supabase Auth. Temporary demo identities use the same profile, interests, and private-location path behind RLS, with explicit and scheduled erasure.
+2. **Discovery and activity state — complete.** Feed fixtures are removed. Supabase stores the shared catalog and per-identity interest, saved, and matchmaking state for both persistent and temporary users.
 3. **Groups and live chat — complete.** Invitations, accepted membership, messages, membership RLS, chat lists, activity-group links, and Realtime message subscriptions are wired and have been exercised with two real test accounts.
 4. **Judge hardening and deploy — local hardening complete.** The visible Meta moment, fallback, offline mobile Playwright path, live-service checks, production health route, clean production build, and rehearsal script are complete. Choose hosting, configure its environment, deploy, and run the smoke suite against the deployed URL.
 
@@ -112,7 +112,7 @@ The Google OAuth control has been replaced with a prominent `Continue as demo` b
 - Ticketmaster failure: retain the last successful catalog; if none exists, show a clear empty state with retry affordance.
 - Meta failure or timeout: return a deterministic brief/explanation with the same UI and mark it as a fallback only in developer diagnostics.
 - Geolocation denial: keep the typed-address option visible and offer the seeded San Diego demo location.
-- Refresh/reopen: session state survives reloads in the same tab session but disappears when the session ends.
+- Refresh/reopen: demo state survives ordinary navigation and reloads. Ending the demo erases it immediately; abandoned demo data expires after two hours.
 - Empty/corrupt session data: reset only the affected store and return to the nearest valid screen.
 
 ## Testing gate before demo

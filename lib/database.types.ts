@@ -85,6 +85,12 @@ export type Database = {
         Update: { user_id?: string; activity_id?: string; min_group_size?: number; max_group_size?: number; accepted_group_sizes?: number[]; status?: "waiting" | "matched" | "cancelled"; group_id?: string | null; match_reason?: string; created_at?: string; updated_at?: string };
         Relationships: [];
       };
+      demo_sessions: {
+        Row: { user_id: string; created_at: string; expires_at: string };
+        Insert: { user_id: string; created_at?: string; expires_at: string };
+        Update: { user_id?: string; created_at?: string; expires_at?: string };
+        Relationships: [];
+      };
       friendships: {
         Row: { id: string; requester_id: string; addressee_id: string; status: "pending" | "accepted" | "declined"; created_at: string; responded_at: string | null };
         Insert: { id?: string; requester_id: string; addressee_id: string; status?: "pending" | "accepted" | "declined"; created_at?: string; responded_at?: string | null };

@@ -36,14 +36,13 @@ function writeDemoStates(states: Record<string, ActivityUiState>) {
 }
 
 export async function resolveViewer(): Promise<Viewer> {
-  if (getAppMode() === "demo") return { kind: "demo" };
-
+  const mode = getAppMode();
   const supabase = createSupabaseBrowserClient();
   if (!supabase) return { kind: "anonymous" };
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { kind: "anonymous" };
+  if (!user) return mode === "demo" ? { kind: "demo" } : { kind: "anonymous" };
 
-  startRealSession();
+  if (mode !== "demo") startRealSession();
   return { kind: "real", userId: user.id };
 }
 

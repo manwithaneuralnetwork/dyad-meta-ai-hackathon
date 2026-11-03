@@ -23,26 +23,13 @@ export default function ProfileOnboardingPage() {
   useEffect(() => {
     let active = true;
     void (async () => {
-      if (getAppMode() === "demo") {
-        const stored = sessionStorage.getItem("dyad-profile");
-        if (stored) {
-          const profile = JSON.parse(stored) as { name?: string; age?: number };
-          if (active) {
-            setName(profile.name ?? "");
-            setAge(profile.age ? String(profile.age) : "");
-          }
-        }
-        if (active) setLoading(false);
-        return;
-      }
-
       const supabase = createSupabaseBrowserClient();
       const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
       if (!supabase || !user) {
         router.replace("/signup");
         return;
       }
-      startRealSession();
+      if (getAppMode() !== "demo") startRealSession();
       const { data } = await supabase.from("profiles").select("display_name, age").eq("id", user.id).maybeSingle();
       if (active && data) {
         setName(data.display_name ?? "");
@@ -60,13 +47,6 @@ export default function ProfileOnboardingPage() {
     if (!valid || saving) return;
     setSaving(true);
     setError("");
-
-    if (getAppMode() === "demo") {
-      const previous = JSON.parse(sessionStorage.getItem("dyad-profile") ?? "{}") as Record<string, unknown>;
-      sessionStorage.setItem("dyad-profile", JSON.stringify({ ...previous, name: name.trim(), age: numericAge }));
-      router.push("/onboarding/location");
-      return;
-    }
 
     const supabase = createSupabaseBrowserClient();
     const { error: saveError } = supabase

@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Bell, ChevronRight, Inbox, MapPin, Pencil, Tags, UsersRound } from "lucide-react";
+import { Bell, ChevronRight, Inbox, MapPin, Pencil, Tags, Trash2, UsersRound } from "lucide-react";
 import styles from "../dyad.module.css";
 import { AppHeader, BottomNavigation } from "../app-navigation";
 import { getViewerProfile, resolveViewer, type PublicProfile, type Viewer } from "@/lib/activity-data";
 import { getNotificationCounts, subscribeToNotificationChanges, unsubscribeFromGroup } from "@/lib/group-data";
+import { getAppMode } from "@/lib/app-session";
 
 const accountSettings = [
   { label: "Inbox", detail: "Invitations and plan updates", href: "/inbox", Icon: Inbox },
@@ -21,6 +22,10 @@ export default function YouPage() {
   const [viewer, setViewer] = useState<Viewer>({ kind: "anonymous" });
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [inboxCount, setInboxCount] = useState(0);
+  const [isDemo, setIsDemo] = useState(false);
+  const [confirmEnd, setConfirmEnd] = useState(false);
+  const [endingDemo, setEndingDemo] = useState(false);
+  const [endError, setEndError] = useState("");
   useEffect(() => {
     let active = true;
     const refresh = async () => {
@@ -36,6 +41,7 @@ export default function YouPage() {
       }
     };
     const handleChange = () => { void refresh(); };
+    setIsDemo(getAppMode() === "demo");
     void refresh();
     window.addEventListener("dyad:notifications-changed", handleChange);
     const channel = subscribeToNotificationChanges(handleChange);
@@ -63,6 +69,28 @@ export default function YouPage() {
             <h2>Settings</h2>
             <div className={styles.youSettingsList}>{accountSettings.map(({ label, detail, href, Icon }) => <Link className={styles.youSettingRow} href={href} key={label}><span className={styles.youSettingIcon}><Icon size={19} /></span><span className={styles.youSettingCopy}><strong>{label}</strong><span>{detail}</span></span>{label === "Inbox" && inboxCount > 0 ? <span className={styles.youSettingBadge} aria-label={`${inboxCount} unread notifications`}>{inboxCount > 99 ? "99+" : inboxCount}</span> : null}<ChevronRight size={18} aria-hidden="true" /></Link>)}</div>
           </section>
+          {isDemo ? <section className={styles.demoSessionPanel}>
+            <div><strong>Temporary demo</strong><span>Your account and activity are erased when this demo ends or after two hours.</span></div>
+            {confirmEnd ? <p className={styles.demoEndConfirm}>This removes you from chats and matchmaking. Shared groups stay available to their other members.</p> : null}
+            {endError ? <p className={styles.demoEndError} role="alert">{endError}</p> : null}
+            <button className={styles.demoEndButton} type="button" disabled={endingDemo} onClick={async () => {
+              if (!confirmEnd) {
+                setConfirmEnd(true);
+                return;
+              }
+              setEndingDemo(true);
+              setEndError("");
+              try {
+                const response = await fetch("/api/session/demo", { method: "DELETE" });
+                if (!response.ok) throw new Error("cleanup failed");
+                window.sessionStorage.clear();
+                window.location.assign("/");
+              } catch {
+                setEndError("We couldn’t erase this demo yet. Please try again.");
+                setEndingDemo(false);
+              }
+            }}><Trash2 size={16} />{endingDemo ? "Erasing demo…" : confirmEnd ? "Confirm and erase" : "End demo & erase data"}</button>
+          </section> : null}
         </div>
         <BottomNavigation active="you" />
       </div>

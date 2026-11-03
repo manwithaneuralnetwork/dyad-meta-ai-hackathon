@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Check, MapPin, Navigation } from "lucide-react";
 import styles from "../../dyad.module.css";
 import SmartBackButton from "../../smart-back-button";
-import { getAppMode } from "@/lib/app-session";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type Coordinates = { latitude: number; longitude: number };
@@ -56,12 +55,6 @@ export default function LocationPage() {
     const location = coordinates
       ? { source: "gps" as const, latitude: coordinates.latitude, longitude: coordinates.longitude }
       : { source: "address" as const, address: trimmedAddress };
-
-    if (getAppMode() === "demo") {
-      window.sessionStorage.setItem("dyad-location", JSON.stringify({ ...location, searchRadiusMiles: 15 }));
-      router.replace("/feed");
-      return;
-    }
 
     const supabase = createSupabaseBrowserClient();
     const { error: saveError } = supabase

@@ -1,6 +1,6 @@
 # Dyad three-minute demo
 
-This script is deliberately short enough to rehearse without rushing. It uses real accounts and a real activity; demo mode remains the no-account route for onboarding and Discovery.
+This script is deliberately short enough to rehearse without rushing. It can use real helper accounts or a temporary full-access demo account against real activities.
 
 ## Before presenting
 
@@ -54,6 +54,6 @@ Open **My Activities**, then **Chats**.
 
 ## Judge self-test route
 
-- **Continue as demo** exercises onboarding, interest selection, location, Discovery filters, Interested, Saved, and empty states without creating an account. Its data remains in the current browser session.
-- A pre-provisioned real test account exercises invitations, Inbox, groups, Realtime chat, and the Meta meetup brief without asking the judge to register.
+- **Continue as demo** exercises the complete product: onboarding, interests, Discovery, matchmaking, invitations, groups, Realtime chat, friends, and Muse. It creates a clearly labeled temporary identity, not a durable personal account.
+- The judge can tap **End demo & erase data** from Profile for immediate cleanup. Abandoned demos expire and are removed automatically within two hours.
 - If Meta times out, the meetup card uses the grounded deterministic fallback with the same layout. If Ticketmaster is unavailable, the last successfully synced catalog remains available in Supabase.
