@@ -1,12 +1,14 @@
 # Dyad
 
-Dyad is an activity-first social PWA for San Diego. It recommends real events from explicit onboarding preferences, then lets people who independently chose the same event opt into finding company.
+Dyad is an activity-first social PWA for San Diego. It recommends real events from explicit onboarding preferences, then helps people who chose the same event form a small group and meet in person.
 
-The app intentionally separates **Interested** (private) from **Find company** (discoverable on that event only). It does not rank events by popularity and does not make personality-based friend matches.
+Instead of ranking people through a swipe deck, **Find Company** lets each participant choose every group size they would enjoy. Dyad matches compatible preferences, considers shared interests with Muse, and sends every proposed member an invitation so everyone can decide whether to join.
+
+**Live demo:** [dyad-san-diego.netlify.app](https://dyad-san-diego.netlify.app)
 
 ## Current status
 
-The approved mobile UI, two-mode authentication, onboarding, persistent activity catalog, AI-assisted interest tags, duplicate rejection, Discovery filters, per-user activity state, matchmaking, activity groups, invitations, and Realtime chat are implemented. Real accounts persist normally. Demo accounts use the same full Supabase-backed product path, then erase their profile, social data, and memberships when ended or expired.
+The mobile PWA includes two-mode authentication, onboarding, a persistent activity catalog, AI-assisted event enrichment, duplicate rejection, Discovery filters, flexible group-size matchmaking, invitations, friendships, notifications, and Supabase Realtime chat. Real accounts persist normally. Demo accounts use the same full product path, then erase their profile, social data, and memberships when ended or expired.
 
 The implementation contract and setup status live in [docs/golden-path-readiness.md](docs/golden-path-readiness.md).
 
@@ -61,37 +63,44 @@ npx supabase functions deploy sync-ticketmaster --no-verify-jwt
 
 Then adapt and run `supabase/cron.sql.example` in the SQL editor. It stores the project URL and secret in Vault and calls the function every six hours.
 
-## AI boundaries
+## How Meta AI is used
 
-Muse Spark runs at two high-leverage points rather than on every feed view:
+Dyad's AI companion, **Muse**, uses Meta's `muse-spark-1.3` model at several high-leverage points:
 
-1. Event ingestion: Ticketmaster activities are assigned one to six interest tags in batches, using the shared 30-tag catalog whenever possible.
-2. Taxonomy growth: the model may add a short, neutral activity tag only when the core catalog cannot describe the event accurately.
+1. **Event understanding:** Ticketmaster activities receive clearer titles and relevant interest tags, with cautious taxonomy growth when the core catalog cannot describe an event.
+2. **Activity recommendations:** Muse can reason over a user's explicit interests and the grounded event catalog.
+3. **Group formation:** after compatible group-size preferences are found, Muse considers shared interests and lightweight profile context to select a welcoming group and explain the fit.
+4. **Meetup planning:** Muse turns grounded activity details into a brief arrival plan and conversation starter.
+5. **In-chat assistance:** a member can explicitly mention `@muse` to ask a concise question. Only then is a limited window of recent group messages supplied as context, with a one-minute per-user cooldown.
 
-Event identity is deterministic: normalized title, UTC minute, and city form a database-enforced duplicate key. Source dates, venues, prices, and URLs always come from Ticketmaster. The model cannot publish activities, send invitations, or enroll users. Private chat is never sent to the model.
+Event identity and exact venue-time duplicate rejection are deterministic. Source dates, venues, prices, images, and URLs remain grounded in Ticketmaster. The model cannot publish activities, enroll users, or bypass invitation acceptance. Deterministic fallbacks keep core flows available if the model is temporarily unavailable.
 
-If Meta is unavailable, onboarding and event ingestion use deterministic fallbacks. If Ticketmaster is unavailable, the last successful catalog remains active.
+If Ticketmaster is unavailable, the last successful catalog remains active.
 
 ## Architecture
 
 ```text
-Ticketmaster ──► duplicate key check ──► Muse Spark tag enrichment
-                                              │
-                                              ├──► activities.topics
-                                              └──► dynamic interest_tags
+Ticketmaster ──► venue/time deduplication ──► Muse event enrichment
+                                                    │
+                                                    ├──► clear titles + topics
+                                                    └──► dynamic interest tags
 
-Onboarding ──► profile + interests + location ──► Discovery tag filters
-                                                        │
-                                      Interested / Find company
-                                                        │
-                                 groups ─► chat ─► reconnect votes
+Onboarding ──► profile + interests + San Diego ──► Discovery
+                                                       │
+                                              Find Company
+                                                       │
+                            size compatibility ─► Muse group selection
+                                                       │
+                                invitations ─► group ─► Realtime chat
+                                                       │
+                                      meetup brief + @muse assistance
 ```
 
 ## Demo walkthrough
 
 1. Complete onboarding with five interests.
 2. Show that the feed explains recommendations without popularity signals.
-3. Open an event and compare Interested with Find company.
-4. Invite an opted-in participant and simulate acceptance.
-5. Open the group, generate a Muse brief, and send a message.
-6. Vote to reconnect and show the mutual result.
+3. Open an event, choose multiple acceptable group sizes, and enter Find Company.
+4. Accept the resulting invitation and open the matched group.
+5. Generate a Muse meetup brief, send a message, and ask `@muse` an event question.
+6. Show friendships, notifications, and the continuing post-activity chat.
