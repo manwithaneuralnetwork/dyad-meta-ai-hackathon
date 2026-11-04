@@ -206,7 +206,7 @@ export default function GroupClient({ groupId }: { groupId: string }) {
               {detail.creationMode === "matchmaking" && detail.matchReason ? <section className={styles.matchReasonCard}><MuseMark size={24} /><span><strong>Why this group</strong>{detail.matchReason}</span></section> : null}
               {brief ? (
                 <section className={styles.aiBriefCard} aria-live="polite">
-                  <div className={styles.aiBriefHeading}><span><MuseMark size={25} /></span><div><small>Planned with Meta AI</small><h2>{brief.title}</h2></div><button type="button" onClick={() => void generateBrief()} disabled={briefLoading} aria-label="Refresh meetup brief"><RefreshCw size={15} /></button></div>
+                  <div className={styles.aiBriefHeading}><span><MuseMark size={25} tone="dark" /></span><div><small>Planned with Meta AI</small><h2>{brief.title}</h2></div><button type="button" onClick={() => void generateBrief()} disabled={briefLoading} aria-label="Refresh meetup brief"><RefreshCw size={15} /></button></div>
                   <dl><div><dt>Meet</dt><dd>{brief.arrival}</dd></div><div><dt>Open with</dt><dd>{brief.opener}</dd></div><div><dt>Check in</dt><dd>{brief.checkIn}</dd></div></dl>
                   <p>Built from activity details only—private messages stay private.</p>
                 </section>

@@ -220,7 +220,7 @@
 .matchmakingSheet::-webkit-scrollbar { display: none; }
 .matchmakerCard { margin-top: 18px; padding: 16px; border: 1px solid color-mix(in srgb, var(--dyad-aqua-deep) 40%, var(--dyad-border)); border-radius: 19px; background: color-mix(in srgb, var(--dyad-aqua) 8%, white); }
 .matchmakerHeading { display: grid; grid-template-columns: 38px minmax(0,1fr); align-items: center; gap: 10px; }
-.matchmakerHeading > span { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 12px; background: var(--dyad-ink); color: var(--dyad-aqua); }
+.matchmakerHeading > span { display: grid; width: 38px; height: 38px; place-items: center; border: 0; border-radius: 0; background: transparent; }
 .matchmakerHeading small { display: block; margin-bottom: 2px; color: var(--dyad-aqua-deep); font-size: 8px; font-weight: 850; letter-spacing: .65px; text-transform: uppercase; }
 .matchmakerHeading h3 { margin: 0; font-size: 17px; letter-spacing: -.55px; }
 .matchmakerCard > p { margin: 12px 0 14px; color: var(--dyad-muted); font-size: 10px; line-height: 1.5; }
@@ -276,7 +276,7 @@
 .groupMenuAction { display: flex; width: 100%; min-height: 39px; align-items: center; gap: 9px; padding: 0 10px; border: 0; border-radius: 9px; background: white; color: var(--dyad-ink); font-size: 11px; font-weight: 760; }
 .groupMenuAction:hover { background: var(--dyad-surface); }
 .aiBriefPrompt { display: grid; grid-template-columns: 38px minmax(0,1fr); gap: 10px; margin: 4px 1px 22px; padding: 14px; border: 1px solid color-mix(in srgb, var(--dyad-aqua-deep) 35%, var(--dyad-border)); border-radius: 16px; background: color-mix(in srgb, var(--dyad-aqua) 8%, white); }
-.aiBriefPrompt > span, .aiBriefHeading > span { display: grid; width: 36px; height: 36px; place-items: center; border-radius: 11px; background: var(--dyad-aqua); color: var(--dyad-ink); }
+.aiBriefPrompt > span, .aiBriefHeading > span { display: grid; width: 36px; height: 36px; place-items: center; border: 0; border-radius: 0; background: transparent; }
 .aiBriefPrompt strong { display: block; margin: 1px 0 4px; font-size: 12px; }
 .aiBriefPrompt p { margin: 0; color: var(--dyad-muted); font-size: 9px; line-height: 1.45; }
 .aiBriefPrompt button { grid-column: 2; width: fit-content; min-height: 34px; padding: 0 13px; border: 0; border-radius: 999px; background: var(--dyad-ink); color: white; font-size: 10px; font-weight: 800; }
@@ -318,7 +318,7 @@
 .messageTime { display: block; margin: 5px 3px 0; color: #8b9490; font-size: 9px; }
 .messageTimeOwn { text-align: right; }
 .museMessageRow { align-items: end; }
-.museAvatar { background: var(--dyad-aqua); color: var(--dyad-ink); transform: translateY(-14px); }
+.museAvatar { background: transparent; color: var(--dyad-ink); transform: translateY(-14px); }
 .museName { display: flex; align-items: center; gap: 6px; color: var(--dyad-aqua-deep); }
 .museName em { padding: 2px 5px; border-radius: 999px; background: color-mix(in srgb, var(--dyad-aqua) 18%, white); color: var(--dyad-aqua-deep); font-size: 7px; font-style: normal; font-weight: 850; letter-spacing: .35px; text-transform: uppercase; }
 .messageBubbleMuse { max-width: min(92%, 315px); border: 1px solid color-mix(in srgb, var(--dyad-aqua-deep) 28%, var(--dyad-border)); border-left: 3px solid var(--dyad-aqua); border-radius: 7px 16px 16px 7px; background: white; color: #24302d; }
@@ -334,8 +334,9 @@
 .museComposerField input { position: relative; z-index: 2; width: 100%; padding: 0 15px; border: 0; background: transparent; color: transparent; caret-color: var(--dyad-ink); }
 .museComposerField input:focus { background: transparent; }
 .museComposerField input::placeholder { color: var(--dyad-muted); opacity: .75; }
-.museMark { display: inline-grid; flex: 0 0 auto; overflow: hidden; place-items: center; border-radius: 32%; background: white; }
-.museMarkImage { display: block; width: 154%; height: 154%; max-width: none; object-fit: cover; }
+.museMark { display: inline-grid; flex: 0 0 auto; overflow: visible; place-items: center; border: 0; border-radius: 0; background: transparent; }
+.museMarkImage { display: block; width: 110%; height: 110%; max-width: none; object-fit: cover; mix-blend-mode: multiply; }
+.museMarkOnDark .museMarkImage { filter: grayscale(1) invert(1) brightness(3); mix-blend-mode: screen; }
 .sendButton { display: grid; place-items: center; width: 42px; height: 42px; padding: 0; border: 0; border-radius: 50%; background: var(--dyad-ink); color: var(--dyad-aqua); }
 .sendButton:disabled { opacity: .35; }
 .groupInviteState { display: grid; place-items: center; margin: auto; padding: 32px 28px; text-align: center; }

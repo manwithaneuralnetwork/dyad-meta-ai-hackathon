@@ -188,7 +188,7 @@ export default function FindCompanySheet({ activity, viewer, initiallyOpen = fal
                 {MATCHMAKING_SIZES.map((size) => <button className={selectedSizes.includes(size) ? styles.groupSizeSelected : ""} type="button" aria-pressed={selectedSizes.includes(size)} disabled={busy !== null} key={size} onClick={() => toggleSize(size)}><strong>{size}</strong><span>{size === 2 ? "Duo" : "people"}</span></button>)}
               </div>
               {waiting ? <div className={styles.matchWaiting}><Clock3 size={15} /><span><strong>Matching is active</strong><small>{waitingCount} {waitingCount === 1 ? "person" : "people"} currently in this activity’s pool</small></span></div> : null}
-              <button className={styles.matchButton} type="button" disabled={busy !== null || loading || !selectedSizes.length} onClick={() => void joinMatchmaking()}><MuseMark size={22} />{busy === "matching" ? "Muse is checking…" : waiting ? `Update · ${preferenceLabel}` : "Join matchmaking"}</button>
+              <button className={styles.matchButton} type="button" disabled={busy !== null || loading || !selectedSizes.length} onClick={() => void joinMatchmaking()}><MuseMark size={22} tone="dark" />{busy === "matching" ? "Muse is checking…" : waiting ? `Update · ${preferenceLabel}` : "Join matchmaking"}</button>
               {waiting ? <button className={styles.leaveMatchButton} type="button" disabled={busy !== null} onClick={() => void leaveMatchmaking()}>{busy === "cancel" ? "Leaving…" : "Leave matching pool"}</button> : null}
             </section>
             <div className={styles.matchDivider}><span>or make a group with friends</span></div>
