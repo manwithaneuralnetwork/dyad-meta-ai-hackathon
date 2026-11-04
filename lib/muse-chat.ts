@@ -1,6 +1,7 @@
 export const MUSE_COOLDOWN_SECONDS = 60;
 export const MUSE_CONTEXT_MESSAGE_COUNT = 12;
 export const MUSE_REPLY_MAX_LENGTH = 320;
+export const MUSE_RESPONSE_TIMEOUT_MS = 25_000;
 
 export function containsMuseMention(body: string) {
   return /(^|\s)@muse\b/i.test(body);

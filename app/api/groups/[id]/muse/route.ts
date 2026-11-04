@@ -5,6 +5,7 @@ import {
   MUSE_CONTEXT_MESSAGE_COUNT,
   MUSE_COOLDOWN_SECONDS,
   MUSE_REPLY_MAX_LENGTH,
+  MUSE_RESPONSE_TIMEOUT_MS,
   containsMuseMention,
   museCooldownReply,
   museUnavailableReply,
@@ -96,10 +97,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       prompt: JSON.stringify(context),
       schema: responseSchema,
       validator: replySchema,
-      timeoutMs: 10_000,
+      timeoutMs: MUSE_RESPONSE_TIMEOUT_MS,
     });
     if (result) reply = result.data.reply;
-  } catch {
+  } catch (error) {
+    console.error("Muse group-chat response failed", {
+      groupId,
+      triggerMessageId: input.data.triggerMessageId,
+      error: error instanceof Error ? error.message : "Unknown model error",
+    });
     // A concise in-chat fallback is more useful than dropping the mention silently.
   }
 
