@@ -77,6 +77,10 @@
 .landingFooter { position: relative; margin: 0 14px 14px; overflow: hidden; padding: 48px 25px 24px; border-radius: 28px; background: var(--dyad-ink); color: white; }
 .landingFooter h2 { position: relative; z-index: 2; max-width: 310px; margin: 0 0 27px; font-size: 37px; line-height: 1.02; letter-spacing: -2.1px; }
 .landingFooter .aquaPill { position: relative; z-index: 2; }
+.visualFooterLink { position: relative; z-index: 2; display: flex; width: fit-content; align-items: center; gap: 6px; margin-top: 20px; color: #c4cfcb; font-size: 10px; font-weight: 760; }
+.visualFooterLink > svg:first-child { color: var(--dyad-aqua); }
+.visualFooterLink > svg:last-child { transition: transform .18s ease; }
+.visualFooterLink:hover > svg:last-child { transform: translateX(3px); }
 .footerRing { position: absolute; right: -80px; top: -78px; width: 220px; height: 220px; border: 38px solid var(--dyad-aqua); border-radius: 50%; opacity: .92; }
 .footerMeta { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; margin-top: 65px; color: #aeb6b3; font-size: 10px; }
 .footerMeta .logo { color: white; transform: scale(.78); transform-origin: left center; }

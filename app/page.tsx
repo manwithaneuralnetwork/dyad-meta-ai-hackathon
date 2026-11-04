@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import styles from "./dyad.module.css";
 import LandingActivityShowcase from "./landing-activity-showcase";
 
@@ -64,6 +64,7 @@ export default function LandingPage() {
           <div className={styles.footerRing} />
           <h2>Your next friendship might already have a start time.</h2>
           <Link className={styles.aquaPill} href="/signup">Find something to do</Link>
+          <Link className={styles.visualFooterLink} href="/visual"><Sparkles size={13} /> Open Dyad Visual <ArrowRight size={13} /></Link>
           <div className={styles.footerMeta}><Logo /><span>© 2026 Dyad</span></div>
         </footer>
       </div>
